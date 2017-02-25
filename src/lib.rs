@@ -16,7 +16,11 @@ impl Handle {
 		Handle(usize::max_value())
 	}
 
-	pub fn to_usize(self) -> usize { self.0 }
+	fn is_undef(self) -> bool {
+		self == Handle::undef()
+	}
+
+	fn to_usize(self) -> usize { self.0 }
 }
 
 /// Represents a trait for keys within an addressable pairing heap.
@@ -215,7 +219,7 @@ impl<T, K> PairingHeap<T, K>
 	/// Updates the internal pointer to the current minimum element by hinting
 	/// to a new possible min element within the heap.
 	fn update_min(&mut self, handle: Handle) {
-		if self.min == Handle::undef() || self.get(handle).entry.key < self.get(self.min).entry.key {
+		if self.min.is_undef() || self.get(handle).entry.key < self.get(self.min).entry.key {
 			self.min = handle;
 		}
 	}

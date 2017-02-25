@@ -1,0 +1,9 @@
+[package]
+name = "addressable-pairing-heap"
+version = "0.1.0"
+authors = ["Robbepop <robbepop@web.de>"]
+
+[dependencies]
+stash = "^0.1"
+unreachable = "^0"
+itertools = "^0"
