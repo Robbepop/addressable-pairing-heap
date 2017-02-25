@@ -129,6 +129,9 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 
 use stash::*;
 
+/// Type alias for `PairingHeap` that has `i64` as default `Key` type.
+pub type DefaultPairingHeap<T> = PairingHeap<T, i64>;
+
 /// An addressable pairing heap implementation.
 /// 
 /// Stores elements with an associated key.
