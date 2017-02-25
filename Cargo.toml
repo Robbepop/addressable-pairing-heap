@@ -1,9 +1,19 @@
 [package]
 name = "addressable-pairing-heap"
 version = "0.1.0"
-authors = ["Robbepop <robbepop@web.de>"]
+authors = ["Robbepop"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+description = """An addressable pairing heap implementation."""
+repository = "https://github.com/Robbepop/addressable-pairing-heap"
+documentation = "https://docs.rs/addressable-pairing-heap"
+keywords = ["heap", "stash", "min-heap", "heap-sort", "collection"]
+categories = ["data-structures"]
 
 [dependencies]
 stash = "^0.1"
 unreachable = "^0"
 itertools = "^0"
+
+[features]
+bench = []
