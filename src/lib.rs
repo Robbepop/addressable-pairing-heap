@@ -315,6 +315,12 @@ impl<T, K> PairingHeap<T, K>
 			.and_then(|node| Some(&node.entry.elem))
 	}
 
+	/// Returns a reference to the current minimum element without bounds checking.
+	/// So use it very carefully!
+	pub unsafe fn get_min_unchecked(&self) -> &T {
+		&self.get(self.min).entry.elem
+	}
+
 	/// Returns a mutable reference to the current minimum element if not empty.
 	pub fn get_min_mut(&mut self) -> Option<&mut T> {
 		self.data
@@ -322,26 +328,39 @@ impl<T, K> PairingHeap<T, K>
 			.and_then(|node| Some(&mut node.entry.elem))
 	}
 
-	/// Removes the element assicated with the minimum key within this `PairingHeap` and returns it.
-	pub fn take_min(&mut self) -> Option<T> {
+	/// Returns a reference to the current minimum element without bounds checking.
+	/// So use it very carefully!
+	pub unsafe fn get_min_unchecked_mut(&mut self) -> &mut T {
 		let min = self.min;
+		&mut self.get_mut(min).entry.elem
+	}
+
+	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
+	pub fn take_min(&mut self) -> Option<T> {
 		match self.is_empty() {
 			true => None,
-			_    => match self.get(min).pos {
-				Position::Child(..) => unsafe{ ::unreachable::unreachable() },
-				Position::Root(idx) => {
-					self.roots.swap_remove(idx);
-					self.min = Handle(usize::max_value());
-					let mut roots = Vec::with_capacity(self.get(min).children.len());
-					roots.append(&mut self.get_mut(min).children);
-					for &child in roots.iter() {
-						self.insert_root(child);
-					}
-					self.pairwise_union();
-					Some(unsafe{
-						self.data.take_unchecked(min.to_usize()).entry.elem
-					})
+			_    => unsafe{ Some(self.take_min_unchecked()) }
+		}
+	}
+
+	/// Removes the element associated with the minimum key within this `PairingHeap` without
+	/// checking for emptiness and returns it.
+	/// 
+	/// So use this method carefully!
+	pub unsafe fn take_min_unchecked(&mut self) -> T {
+		let min = self.min;
+		match self.get(min).pos {
+			Position::Child(..) => ::unreachable::unreachable(),
+			Position::Root(idx) => {
+				self.roots.swap_remove(idx);
+				self.min = Handle::undef();
+				let mut roots = Vec::with_capacity(self.get(min).children.len());
+				roots.append(&mut self.get_mut(min).children);
+				for &child in roots.iter() {
+					self.insert_root(child);
 				}
+				self.pairwise_union();
+				self.data.take_unchecked(min.to_usize()).entry.elem
 			}
 		}
 	}
