@@ -346,14 +346,19 @@ impl<T, K> PairingHeap<T, K>
 		}
 	}
 
-	/// Iterate over the values in this `PairingHeap` by reference.
+	/// Iterate over the values in this `PairingHeap` by reference in unspecified order.
 	pub fn values<'a>(&'a self) -> Values<'a, T, K> {
 		Values{iter: self.data.values()}
 	}
 
-	/// Iterate over the values in this `PairingHeap` by mutable reference.
+	/// Iterate over the values in this `PairingHeap` by mutable reference unspecified order.
 	pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, T, K> {
 		ValuesMut{iter: self.data.values_mut()}
+	}
+
+	/// Iterate over values stored within a `PairingHeap` in a sorted-by-min order. Drains the heap.
+	pub fn drain_min(self) -> DrainMin<T, K> {
+		DrainMin{heap: self}
 	}
 }
 
@@ -406,6 +411,19 @@ impl<'a, T, K: Key> Iterator for ValuesMut<'a, T, K> {
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.iter.next().map(|node| &mut node.entry.elem)
+	}
+}
+
+/// Iterator over values stored within a `PairingHeap` in a sorted-by-min order. Drains the heap.
+pub struct DrainMin<T, K: Key> {
+	heap: PairingHeap<T, K>
+}
+
+impl<T, K: Key> Iterator for DrainMin<T, K> {
+	type Item = T;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.heap.take_min()
 	}
 }
 
