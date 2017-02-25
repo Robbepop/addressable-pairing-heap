@@ -345,6 +345,16 @@ impl<T, K> PairingHeap<T, K>
 			}
 		}
 	}
+
+	/// Iterate over the values in this `PairingHeap` by reference.
+	pub fn values<'a>(&'a self) -> Values<'a, T, K> {
+		Values{iter: self.data.values()}
+	}
+
+	/// Iterate over the values in this `PairingHeap` by mutable reference.
+	pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, T, K> {
+		ValuesMut{iter: self.data.values_mut()}
+	}
 }
 
 use std::ops::{Index, IndexMut};
@@ -370,6 +380,32 @@ impl<T, K> IndexMut<Handle> for PairingHeap<T, K>
 			.get_mut(handle.to_usize())
 			.expect("no node found for given handle")
 			.entry.elem
+	}
+}
+
+/// Iterator over references to values stored within a `PairingHeap`.
+pub struct Values<'a, T: 'a, K: 'a + Key> {
+	iter: ::stash::stash::Values<'a, Node<T, K>>
+}
+
+/// Iterator over mutable references to values stored within a `PairingHeap`.
+pub struct ValuesMut<'a, T: 'a, K: 'a + Key> {
+	iter: ::stash::stash::ValuesMut<'a, Node<T, K>>
+}
+
+impl<'a, T, K: Key> Iterator for Values<'a, T, K> {
+	type Item = &'a T;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.iter.next().map(|node| &node.entry.elem)
+	}
+}
+
+impl<'a, T, K: Key> Iterator for ValuesMut<'a, T, K> {
+	type Item = &'a mut T;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.iter.next().map(|node| &mut node.entry.elem)
 	}
 }
 
