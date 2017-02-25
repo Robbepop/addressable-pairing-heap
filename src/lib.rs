@@ -117,6 +117,16 @@ impl<T, K> Node<T, K>
 	}
 }
 
+/// Errors that can be caused while using `PairingHeap`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Error {
+	/// Caused when using `decrease_key` method with a `new_key` that is greater than the old one.
+	DecreaseKeyOutOfOrder
+}
+
+/// Generic `Result` type for `PairingHeap` methods.
+pub type Result<T> = ::std::result::Result<T, Error>;
+
 use stash::*;
 
 /// An addressable pairing heap implementation.
@@ -281,18 +291,21 @@ impl<T, K> PairingHeap<T, K>
 
 	/// Decreases the key of the element with the associated given `handle`.
 	/// Will panic if the given new key is not lower than the previous key.
-	pub fn decrease_key(&mut self, handle: Handle, new_key: K) {
-		assert!(new_key < self.get(handle).entry.key);
+	pub fn decrease_key(&mut self, handle: Handle, new_key: K) -> Result<()> {
+		if new_key >= self.get(handle).entry.key {
+			return Err(Error::DecreaseKeyOutOfOrder)
+		}
 
 		self.get_mut(handle).entry.key = new_key;
 		match self.get(handle).pos {
 			Position::Root(_) => {
-				self.update_min(handle)
+				self.update_min(handle);
 			},
 			Position::Child(..) => {
 				self.cut(handle)
 			}
 		}
+		Ok(())
 	}
 
 	/// Returns a reference to the current minimum element if not empty.
@@ -400,17 +413,17 @@ mod tests {
 		let e = ph.insert(4, 200);
 		let f = ph.insert(5, 250);
 		assert_eq!(Some(&0), ph.get_min());
-		ph.decrease_key(f, -50);
+		assert_eq!(Ok(()), ph.decrease_key(f, -50));
 		assert_eq!(Some(&5), ph.get_min());
-		ph.decrease_key(e, -100);
+		assert_eq!(Ok(()), ph.decrease_key(e, -100));
 		assert_eq!(Some(&4), ph.get_min());
-		ph.decrease_key(d, -99);
+		assert_eq!(Ok(()), ph.decrease_key(d, -99));
 		assert_eq!(Some(&4), ph.get_min());
-		ph.decrease_key(c, 1000);
+		assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(c, 1000));
 		assert_eq!(Some(&4), ph.get_min());
-		ph.decrease_key(b, -1000);
+		assert_eq!(Ok(()), ph.decrease_key(b, -1000));
 		assert_eq!(Some(&1), ph.get_min());
-		ph.decrease_key(a, 100);
+		assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(a, 100));
 		assert_eq!(Some(&1), ph.get_min());
 	}
 

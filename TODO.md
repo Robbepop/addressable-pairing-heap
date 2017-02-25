@@ -10,4 +10,3 @@ TODO List for Addressable Pairing Heap
 - implement `unsafe` versions of `get_min`, `get_min_mut` and `take_min`.
 - add new tests to test `PairingHeap` implementation.
 - add `DefaultPairingHeap<T>` that defaults the `K` (key) type to `i64`.
-- add crates.io cathegories and improve `Cargo.toml` in general.
