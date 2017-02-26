@@ -22,9 +22,7 @@ extern crate rand;
 
 extern crate stash;
 extern crate unreachable;
-extern crate itertools;
-
-use itertools::Itertools;
+// extern crate itertools;
 
 /// A handle to access stored elements within an addressable pairing heap.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -233,17 +231,14 @@ impl<T, K> PairingHeap<T, K>
 	/// Pairwise unifies roots in the `PairingHeap` which
 	/// effectively decreases the number of roots to half.
 	fn pairwise_union(&mut self) {
-		let mut roots = Vec::with_capacity(self.roots.len());
-		roots.append(&mut self.roots);
-		if roots.len() % 2 == 0 {
-			for (left, right) in roots.drain(..).tuples::<(_,_)>() {
-				self.union(left, right)
-			}
-		}
-		else if let Some((&fst, rest)) = roots.split_first() {
-			self.insert_root(fst);
-			for (&left, &right) in rest.iter().tuples::<(_,_)>() {
-				self.union(left, right)
+		let mut roots =
+			::std::mem::replace(&mut self.roots, Vec::new())
+			.into_iter();
+		loop {
+			match (roots.next(), roots.next()) {
+				(Some(fst), Some(snd)) => self.union(fst, snd),
+				(Some(fst), None     ) => self.insert_root(fst),
+				_                      => return
 			}
 		}
 	}
@@ -363,9 +358,12 @@ impl<T, K> PairingHeap<T, K>
 			Position::Root(idx) => {
 				self.roots.swap_remove(idx);
 				self.min = Handle::undef();
-				let mut roots = Vec::with_capacity(self.get(min).children.len());
-				roots.append(&mut self.get_mut(min).children);
-				for &child in roots.iter() {
+				// let mut roots = Vec::with_capacity(self.get(min).children.len());
+				// roots.append(&mut self.get_mut(min).children);
+				// for &child in roots.iter() {
+				// 	self.insert_root(child);
+				// }
+				for child in ::std::mem::replace(&mut self.get_mut(min).children, Vec::new()).into_iter() {
 					self.insert_root(child);
 				}
 				self.pairwise_union();
@@ -698,7 +696,7 @@ mod bench {
 	#[bench]
 	fn pairing_heap_pop(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
-		for &key in setup_sample().iter() {
+		for key in setup_sample().into_iter() {
 			ph.insert((), key);
 		}
 		bencher.iter(|| {
@@ -723,7 +721,7 @@ mod bench {
 	#[bench]
 	fn binary_heap_pop(bencher: &mut Bencher) {
 		let mut bh = BinaryHeap::new();
-		for &key in setup_sample().iter() {
+		for key in setup_sample().into_iter() {
 			bh.push(key);
 		}
 		bencher.iter(|| {
@@ -747,7 +745,7 @@ mod bench {
 	#[bench]
 	fn pairing_heap_clone(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
-		for &key in setup_sample().iter() {
+		for key in setup_sample().into_iter() {
 			ph.insert((), key);
 		}
 		bencher.iter(|| {
@@ -758,7 +756,7 @@ mod bench {
 	#[bench]
 	fn binary_heap_clone(bencher: &mut Bencher) {
 		let mut bh = BinaryHeap::new();
-		for &key in setup_sample().iter() {
+		for key in setup_sample().into_iter() {
 			bh.push(key);
 		}
 		bencher.iter(|| {
