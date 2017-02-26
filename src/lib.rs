@@ -22,7 +22,6 @@ extern crate rand;
 
 extern crate stash;
 extern crate unreachable;
-// extern crate itertools;
 
 /// A handle to access stored elements within an addressable pairing heap.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -288,7 +287,7 @@ impl<T, K> PairingHeap<T, K>
 	/// 
 	/// The handle is for example required in order to use methods like `decrease_key`.
 	#[inline]
-	pub fn insert(&mut self, elem: T, key: K) -> Handle {
+	pub fn push(&mut self, elem: T, key: K) -> Handle {
 		let handle = self.mk_root_node(elem, key);
 		self.insert_root(handle);
 		handle
@@ -331,7 +330,7 @@ impl<T, K> PairingHeap<T, K>
 
 	/// Returns a reference to the current minimum element if not empty.
 	#[inline]
-	pub fn get_min(&self) -> Option<&T> {
+	pub fn peek(&self) -> Option<&T> {
 		self.data
 			.get(self.min.to_usize())
 			.and_then(|node| Some(&node.entry.elem))
@@ -340,13 +339,13 @@ impl<T, K> PairingHeap<T, K>
 	/// Returns a reference to the current minimum element without bounds checking.
 	/// So use it very carefully!
 	#[inline]
-	pub unsafe fn get_min_unchecked(&self) -> &T {
+	pub unsafe fn peek_unchecked(&self) -> &T {
 		&self.get(self.min).entry.elem
 	}
 
 	/// Returns a mutable reference to the current minimum element if not empty.
 	#[inline]
-	pub fn get_min_mut(&mut self) -> Option<&mut T> {
+	pub fn peek_mut(&mut self) -> Option<&mut T> {
 		self.data
 			.get_mut(self.min.to_usize())
 			.and_then(|node| Some(&mut node.entry.elem))
@@ -355,17 +354,17 @@ impl<T, K> PairingHeap<T, K>
 	/// Returns a reference to the current minimum element without bounds checking.
 	/// So use it very carefully!
 	#[inline]
-	pub unsafe fn get_min_unchecked_mut(&mut self) -> &mut T {
+	pub unsafe fn peek_unchecked_mut(&mut self) -> &mut T {
 		let min = self.min;
 		&mut self.get_mut(min).entry.elem
 	}
 
 	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
 	#[inline]
-	pub fn take_min(&mut self) -> Option<T> {
+	pub fn pop(&mut self) -> Option<T> {
 		match self.is_empty() {
 			true => None,
-			_    => unsafe{ Some(self.take_min_unchecked()) }
+			_    => unsafe{ Some(self.pop_unchecked()) }
 		}
 	}
 
@@ -373,7 +372,7 @@ impl<T, K> PairingHeap<T, K>
 	/// checking for emptiness and returns it.
 	/// 
 	/// So use this method carefully!
-	pub unsafe fn take_min_unchecked(&mut self) -> T {
+	pub unsafe fn pop_unchecked(&mut self) -> T {
 		let min = self.min;
 		match self.get(min).pos {
 			Position::Child(..) => ::unreachable::unreachable(),
@@ -472,7 +471,7 @@ impl<T, K: Key> Iterator for DrainMin<T, K> {
 
 	#[inline]
 	fn next(&mut self) -> Option<Self::Item> {
-		self.heap.take_min()
+		self.heap.pop()
 	}
 }
 
@@ -483,79 +482,79 @@ mod tests {
 	#[test]
 	fn take_min() {
 		let mut ph = PairingHeap::new();
-		ph.insert(0,   6);
-		ph.insert(1,  10);
-		ph.insert(2, -42);
-		ph.insert(3,1337);
-		ph.insert(4,  -1);
-		ph.insert(5,   1);
-		ph.insert(6,   2);
-		ph.insert(7,   3);
-		ph.insert(8,   4);
-		ph.insert(9,   5);
-		assert_eq!(Some(2), ph.take_min());
-		assert_eq!(Some(4), ph.take_min());
-		assert_eq!(Some(5), ph.take_min());
-		assert_eq!(Some(6), ph.take_min());
-		assert_eq!(Some(7), ph.take_min());
-		assert_eq!(Some(8), ph.take_min());
-		assert_eq!(Some(9), ph.take_min());
-		assert_eq!(Some(0), ph.take_min());
-		assert_eq!(Some(1), ph.take_min());
-		assert_eq!(Some(3), ph.take_min());
-		assert_eq!(None   , ph.take_min());
+		ph.push(0,   6);
+		ph.push(1,  10);
+		ph.push(2, -42);
+		ph.push(3,1337);
+		ph.push(4,  -1);
+		ph.push(5,   1);
+		ph.push(6,   2);
+		ph.push(7,   3);
+		ph.push(8,   4);
+		ph.push(9,   5);
+		assert_eq!(Some(2), ph.pop());
+		assert_eq!(Some(4), ph.pop());
+		assert_eq!(Some(5), ph.pop());
+		assert_eq!(Some(6), ph.pop());
+		assert_eq!(Some(7), ph.pop());
+		assert_eq!(Some(8), ph.pop());
+		assert_eq!(Some(9), ph.pop());
+		assert_eq!(Some(0), ph.pop());
+		assert_eq!(Some(1), ph.pop());
+		assert_eq!(Some(3), ph.pop());
+		assert_eq!(None   , ph.pop());
 	}
 
 	#[test]
 	fn decrease_key() {
 		let mut ph = PairingHeap::new();
-		let a = ph.insert(0,   0);
-		let b = ph.insert(1,  50);
-		let c = ph.insert(2, 100);
-		let d = ph.insert(3, 150);
-		let e = ph.insert(4, 200);
-		let f = ph.insert(5, 250);
-		assert_eq!(Some(&0), ph.get_min());
+		let a = ph.push(0,   0);
+		let b = ph.push(1,  50);
+		let c = ph.push(2, 100);
+		let d = ph.push(3, 150);
+		let e = ph.push(4, 200);
+		let f = ph.push(5, 250);
+		assert_eq!(Some(&0), ph.peek());
 		assert_eq!(Ok(()), ph.decrease_key(f, -50));
-		assert_eq!(Some(&5), ph.get_min());
+		assert_eq!(Some(&5), ph.peek());
 		assert_eq!(Ok(()), ph.decrease_key(e, -100));
-		assert_eq!(Some(&4), ph.get_min());
+		assert_eq!(Some(&4), ph.peek());
 		assert_eq!(Ok(()), ph.decrease_key(d, -99));
-		assert_eq!(Some(&4), ph.get_min());
+		assert_eq!(Some(&4), ph.peek());
 		assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(c, 1000));
-		assert_eq!(Some(&4), ph.get_min());
+		assert_eq!(Some(&4), ph.peek());
 		assert_eq!(Ok(()), ph.decrease_key(b, -1000));
-		assert_eq!(Some(&1), ph.get_min());
+		assert_eq!(Some(&1), ph.peek());
 		assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(a, 100));
-		assert_eq!(Some(&1), ph.get_min());
+		assert_eq!(Some(&1), ph.peek());
 	}
 
 	#[test]
 	fn empty_take() {
 		let mut ph = PairingHeap::<usize, usize>::new();
-		assert_eq!(None, ph.take_min());
+		assert_eq!(None, ph.pop());
 	}
 
 	fn setup() -> PairingHeap<char, i64> {
 		let mut ph = PairingHeap::new();
-		ph.insert('a', 100);
-		ph.insert('b',  50);
-		ph.insert('c', 150);
-		ph.insert('d', -25);
-		ph.insert('e', 999);
-		ph.insert('f',  42);
-		ph.insert('g',  43);
-		ph.insert('i',  41);
-		ph.insert('j',-100);
-		ph.insert('k', -77);
-		ph.insert('l', 123);
-		ph.insert('m',-123);
-		ph.insert('n',   0);
-		ph.insert('o',  -1);
-		ph.insert('p',   2);
-		ph.insert('q',  -3);
-		ph.insert('r',   4);
-		ph.insert('s',  -5);
+		ph.push('a', 100);
+		ph.push('b',  50);
+		ph.push('c', 150);
+		ph.push('d', -25);
+		ph.push('e', 999);
+		ph.push('f',  42);
+		ph.push('g',  43);
+		ph.push('i',  41);
+		ph.push('j',-100);
+		ph.push('k', -77);
+		ph.push('l', 123);
+		ph.push('m',-123);
+		ph.push('n',   0);
+		ph.push('o',  -1);
+		ph.push('p',   2);
+		ph.push('q',  -3);
+		ph.push('r',   4);
+		ph.push('s',  -5);
 		ph
 	}
 

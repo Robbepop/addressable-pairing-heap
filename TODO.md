@@ -13,10 +13,10 @@ TODO List for Addressable Pairing Heap
 - Renames:
    - `insert` to `push`
    - `take_min` to `pop`
-   - `get` to `resolve`
-   - `get_mut` to `resolve_mut`
    - `get_min` to `peek`
    - `get_min_mut` to `peek_mut`
+   - `get` to `resolve`
+   - `get_mut` to `resolve_mut`
 
 - Add methods:
    - `get(&self, handle: Handle) -> Option<&T>`
