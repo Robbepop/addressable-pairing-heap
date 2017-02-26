@@ -9,7 +9,6 @@ TODO List for Addressable Pairing Heap
 - Add benchmarks:
    - To compare performance between `SmallVec` and `Vec` for children storage in `Node`.
    - To compare performance between `PairingHeap` and `BinaryHeap` of the standard library.
-- Use mem::replace to improve performance of `take_min{_unchecked}` and `pairwise_union`.
 
 - Renames:
    - `insert` to `push`
