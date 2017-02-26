@@ -538,7 +538,6 @@ mod tests {
 		ph
 	}
 
-
 	// fn setup_vec() -> Vec<(char, i64)> {
 	// 	vec![
 	// 		('a',  0), ('A', 26), ('.', 52),
@@ -614,11 +613,42 @@ mod bench {
     use test::{Bencher, black_box};
     use ::std::collections::BinaryHeap;
 
-    fn setup_sample() -> Vec<i64> {
+	fn setup_sample() -> Vec<i64> {
 		use rand::{thread_rng, sample};
 		let n       = 100_000;
 		let mut rng = thread_rng();
 		sample(&mut rng, 1..n, n as usize)
+	}
+
+	fn setup_sample_bigpod() -> Vec<BigPod> {
+		use rand::{thread_rng, sample};
+		let n       = 100_000;
+		let mut rng = thread_rng();
+		sample(&mut rng, 1..n, n as usize)
+			.into_iter()
+			.map(|val| val.into())
+			.collect::<Vec<BigPod>>()
+	}
+
+    #[derive(Debug, Clone, PartialEq, Eq, Ord)]
+    struct BigPod {
+    	elems: [i64; 32]
+    }
+
+    impl From<i64> for BigPod {
+    	fn from(val: i64) -> BigPod {
+    		let mut bp = BigPod{
+    			elems: [0; 32]
+    		};
+    		bp.elems[0] = val;
+    		bp
+    	}
+    }
+
+    impl PartialOrd for BigPod {
+    	fn partial_cmp(&self, other: &BigPod) -> Option<std::cmp::Ordering> {
+    		self.elems[0].partial_cmp(&other.elems[0])
+    	}
     }
 
 	#[bench]
@@ -633,12 +663,34 @@ mod bench {
 	}
 
 	#[bench]
+	fn pairing_heap_push_bigpod(bencher: &mut Bencher) {
+		let sample = setup_sample_bigpod();
+		bencher.iter(|| {
+			let mut ph = PairingHeap::new();
+			for bigpod in sample.iter() {
+				black_box(ph.insert(bigpod.clone(), bigpod.elems[0]));
+			}
+		});
+	}
+
+	#[bench]
 	fn binary_heap_push(bencher: &mut Bencher) {
 		let sample = setup_sample();
 		bencher.iter(|| {
 			let mut bh = BinaryHeap::new();
 			for &key in sample.iter() {
 				black_box(bh.push(key));
+			}
+		});
+	}
+
+	#[bench]
+	fn binary_heap_push_bigpod(bencher: &mut Bencher) {
+		let sample = setup_sample_bigpod();
+		bencher.iter(|| {
+			let mut bh = BinaryHeap::new();
+			for bigpod in sample.iter() {
+				black_box(bh.push(bigpod.clone()));
 			}
 		});
 	}
@@ -656,6 +708,19 @@ mod bench {
 	}
 
 	#[bench]
+	fn pairing_heap_pop_bigpod(bencher: &mut Bencher) {
+		let mut ph = PairingHeap::new();
+		for bigpod in setup_sample_bigpod().into_iter() {
+			let head = bigpod.elems[0];
+			ph.insert(bigpod, head);
+		}
+		bencher.iter(|| {
+			let mut ph = ph.clone();
+			while let Some(_) = black_box(ph.take_min()) {}
+		});
+	}
+
+	#[bench]
 	fn binary_heap_pop(bencher: &mut Bencher) {
 		let mut bh = BinaryHeap::new();
 		for &key in setup_sample().iter() {
@@ -664,6 +729,40 @@ mod bench {
 		bencher.iter(|| {
 			let mut bh = bh.clone();
 			while let Some(_) = black_box(bh.pop()) {}
+		});
+	}
+
+	#[bench]
+	fn binary_heap_pop_bigpod(bencher: &mut Bencher) {
+		let mut bh = BinaryHeap::new();
+		for bigpod in setup_sample_bigpod().into_iter() {
+			bh.push(bigpod);
+		}
+		bencher.iter(|| {
+			let mut bh = bh.clone();
+			while let Some(_) = black_box(bh.pop()) {}
+		});
+	}
+
+	#[bench]
+	fn pairing_heap_clone(bencher: &mut Bencher) {
+		let mut ph = PairingHeap::new();
+		for &key in setup_sample().iter() {
+			ph.insert((), key);
+		}
+		bencher.iter(|| {
+			black_box(&ph.clone());
+		});
+	}
+
+	#[bench]
+	fn binary_heap_clone(bencher: &mut Bencher) {
+		let mut bh = BinaryHeap::new();
+		for &key in setup_sample().iter() {
+			bh.push(key);
+		}
+		bencher.iter(|| {
+			black_box(&bh.clone());
 		});
 	}
 }
