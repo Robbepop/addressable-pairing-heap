@@ -707,7 +707,7 @@ mod bench {
 		bencher.iter(|| {
 			let mut ph = PairingHeap::new();
 			for &key in sample.iter() {
-				black_box(ph.insert((), key));
+				black_box(ph.push((), key));
 			}
 		});
 	}
@@ -718,7 +718,7 @@ mod bench {
 		bencher.iter(|| {
 			let mut ph = PairingHeap::new();
 			for bigpod in sample.iter() {
-				black_box(ph.insert(bigpod.clone(), bigpod.elems[0]));
+				black_box(ph.push(bigpod.clone(), bigpod.elems[0]));
 			}
 		});
 	}
@@ -749,11 +749,11 @@ mod bench {
 	fn pairing_heap_pop(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for key in setup_sample().into_iter() {
-			ph.insert((), key);
+			ph.push((), key);
 		}
 		bencher.iter(|| {
 			let mut ph = ph.clone();
-			while let Some(_) = black_box(ph.take_min()) {}
+			while let Some(_) = black_box(ph.pop()) {}
 		});
 	}
 
@@ -762,11 +762,11 @@ mod bench {
 		let mut ph = PairingHeap::new();
 		for bigpod in setup_sample_bigpod().into_iter() {
 			let head = bigpod.elems[0];
-			ph.insert(bigpod, head);
+			ph.push(bigpod, head);
 		}
 		bencher.iter(|| {
 			let mut ph = ph.clone();
-			while let Some(_) = black_box(ph.take_min()) {}
+			while let Some(_) = black_box(ph.pop()) {}
 		});
 	}
 
@@ -798,7 +798,7 @@ mod bench {
 	fn pairing_heap_clone(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for key in setup_sample().into_iter() {
-			ph.insert((), key);
+			ph.push((), key);
 		}
 		bencher.iter(|| {
 			black_box(&ph.clone());

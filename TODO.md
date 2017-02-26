@@ -9,9 +9,3 @@ TODO List for Addressable Pairing Heap
 - Add benchmarks:
    - To compare performance between `SmallVec` and `Vec` for children storage in `Node`.
    - To compare performance between `PairingHeap` and `BinaryHeap` of the standard library.
-
-- Add methods:
-   - `get(&self, handle: Handle) -> Option<&T>`
-   - `get_unchecked(&self, handle: Handle) -> &T`
-   - `get_mut(&mut self, handle: Handle) -> Option<&mut T>`
-   - `get_unchecked_mut(&mut self, handle: Handle) -> &mut T`

@@ -16,19 +16,19 @@ Benchmarks show that the current implementation suffers from performance issues 
 
 ## Binary Heap
 ```
-test bench::binary_heap_clone        ... bench:      28,823 ns/iter (+/- 1,823)
-test bench::binary_heap_pop          ... bench:   3,373,355 ns/iter (+/- 203,532)
-test bench::binary_heap_pop_bigpod   ... bench:  19,527,395 ns/iter (+/- 893,724)
-test bench::binary_heap_push         ... bench:   1,590,254 ns/iter (+/- 144,186)
-test bench::binary_heap_push_bigpod  ... bench:  11,129,994 ns/iter (+/- 583,714)
+test bench::binary_heap_clone        ... bench:      27,409 ns/iter (+/- 1,958)
+test bench::binary_heap_pop          ... bench:   3,227,855 ns/iter (+/- 35,525)
+test bench::binary_heap_pop_bigpod   ... bench:  17,386,429 ns/iter (+/- 85,175)
+test bench::binary_heap_push         ... bench:   1,522,285 ns/iter (+/- 39,222)
+test bench::binary_heap_push_bigpod  ... bench:  10,600,908 ns/iter (+/- 226,227)
 ```
 
 ## Pairing Heap
 ```
-test bench::pairing_heap_clone       ... bench:   1,936,221 ns/iter (+/- 252,472)
-test bench::pairing_heap_pop         ... bench:  12,540,419 ns/iter (+/- 363,525)
-test bench::pairing_heap_pop_bigpod  ... bench:  26,912,984 ns/iter (+/- 398,958)
-test bench::pairing_heap_push        ... bench:   2,889,341 ns/iter (+/- 104,221)
-test bench::pairing_heap_push_bigpod ... bench:  11,301,338 ns/iter (+/- 166,789)
+test bench::pairing_heap_clone       ... bench:   1,713,716 ns/iter (+/- 43,337)
+test bench::pairing_heap_pop         ... bench:  11,255,949 ns/iter (+/- 209,302)
+test bench::pairing_heap_pop_bigpod  ... bench:  26,683,916 ns/iter (+/- 136,507)
+test bench::pairing_heap_push        ... bench:   2,644,503 ns/iter (+/- 34,863)
+test bench::pairing_heap_push_bigpod ... bench:  10,997,608 ns/iter (+/- 161,914)
 
 ```
