@@ -13,7 +13,6 @@ categories = ["data-structures"]
 [dependencies]
 stash = "^0.1.2"
 unreachable = "^0.1.1"
-itertools = "^0.5.9"
 rand = "0.3"
 
 [features]

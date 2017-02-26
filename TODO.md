@@ -11,10 +11,6 @@ TODO List for Addressable Pairing Heap
    - To compare performance between `PairingHeap` and `BinaryHeap` of the standard library.
 
 - Renames:
-   - `insert` to `push`
-   - `take_min` to `pop`
-   - `get_min` to `peek`
-   - `get_min_mut` to `peek_mut`
    - `get` to `resolve`
    - `get_mut` to `resolve_mut`
 
