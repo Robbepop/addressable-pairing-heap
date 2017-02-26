@@ -508,4 +508,64 @@ mod tests {
 		let mut ph = PairingHeap::<usize, usize>::new();
 		assert_eq!(None, ph.take_min());
 	}
+
+	fn setup() -> PairingHeap<char, i64> {
+		let mut ph = PairingHeap::new();
+		ph.insert('a', 100);
+		ph.insert('b',  50);
+		ph.insert('c', 150);
+		ph.insert('d', -25);
+		ph.insert('e', 999);
+		ph.insert('f',  42);
+		ph.insert('g',  43);
+		ph.insert('i',  41);
+		ph.insert('j',-100);
+		ph.insert('k', -77);
+		ph.insert('l', 123);
+		ph.insert('m',-123);
+		ph.insert('n',   0);
+		ph.insert('o',  -1);
+		ph.insert('p',   2);
+		ph.insert('q',  -3);
+		ph.insert('r',   4);
+		ph.insert('s',  -5);
+		ph
+	}
+
+	#[test]
+	fn drain_min() {
+		let ph = setup();
+		let mut drain = ph.drain_min();
+
+		assert_eq!(drain.next(), Some('m'));
+		assert_eq!(drain.next(), Some('j'));
+		assert_eq!(drain.next(), Some('k'));
+		assert_eq!(drain.next(), Some('d'));
+		assert_eq!(drain.next(), Some('s'));
+		assert_eq!(drain.next(), Some('q'));
+		assert_eq!(drain.next(), Some('o'));
+		assert_eq!(drain.next(), Some('n'));
+
+		assert_eq!(drain.next(), Some('p'));
+		assert_eq!(drain.next(), Some('r'));
+		assert_eq!(drain.next(), Some('i'));
+		assert_eq!(drain.next(), Some('f'));
+		assert_eq!(drain.next(), Some('g'));
+		assert_eq!(drain.next(), Some('b'));
+		assert_eq!(drain.next(), Some('a'));
+		assert_eq!(drain.next(), Some('l'));
+		assert_eq!(drain.next(), Some('c'));
+		assert_eq!(drain.next(), Some('e'));
+
+		assert_eq!(drain.next(), None);
+	}
+
+	#[test]
+	fn values() {
+		let ph = setup();
+		let values = ph.values();
+
+		// cannot test order of values since it is unspecified!
+		assert_eq!(values.count(), 18);
+	}
 }
