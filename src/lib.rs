@@ -18,6 +18,7 @@
 
 #[cfg(all(feature = "bench", test))]
 extern crate test;
+extern crate rand;
 
 extern crate stash;
 extern crate unreachable;
@@ -51,7 +52,7 @@ pub trait Key: Copy + PartialOrd + Ord {}
 impl<T> Key for T where T: Copy + PartialOrd + Ord {}
 
 /// An entry within an addressable pairing heap.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Entry<T, K> where K: Key {
 	key : K,
 	elem: T
@@ -101,7 +102,7 @@ impl Position {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Node<T, K>
 	where K: Key
 {
@@ -154,7 +155,7 @@ pub type DefaultPairingHeap<T> = PairingHeap<T, i64>;
 /// simply increases the priority of the associated element.
 /// 
 /// It is possible to use different implementations for `Key` as the key type.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PairingHeap<T, K>
 	where K: Key
 {
@@ -537,6 +538,38 @@ mod tests {
 		ph
 	}
 
+
+	// fn setup_vec() -> Vec<(char, i64)> {
+	// 	vec![
+	// 		('a',  0), ('A', 26), ('.', 52),
+	// 		('b',  1), ('B', 27), (',', 53),
+	// 		('c',  2), ('C', 28), (';', 54),
+	// 		('d',  3), ('D', 29), ('!', 55),
+	// 		('e',  4), ('E', 30), ('&', 56),
+	// 		('f',  5), ('F', 31), ('|', 57),
+	// 		('g',  6), ('G', 32), ('(', 58),
+	// 		('h',  7), ('H', 33), (')', 59),
+	// 		('i',  8), ('I', 34), ('[', 60),
+	// 		('j',  9), ('J', 35), (']', 61),
+	// 		('k', 10), ('K', 36), ('{', 62),
+	// 		('l', 11), ('L', 37), ('}', 63),
+	// 		('m', 12), ('M', 38), ('=', 64),
+	// 		('n', 13), ('N', 39), ('?', 65),
+	// 		('o', 14), ('O', 40), ('+', 66),
+	// 		('p', 15), ('P', 41), ('-', 67),
+	// 		('q', 16), ('Q', 42), ('*', 68),
+	// 		('r', 17), ('R', 43), ('/', 69),
+	// 		('s', 18), ('S', 44), ('<', 70),
+	// 		('t', 19), ('T', 45), ('>', 71),
+	// 		('u', 20), ('U', 46), ('=', 72),
+	// 		('v', 21), ('V', 47), ('#', 73),
+	// 		('w', 22), ('W', 48), ('~', 74),
+	// 		('x', 23), ('X', 49), ('?', 75),
+	// 		('y', 24), ('Y', 50), (':', 76),
+	// 		('z', 25), ('Z', 51), ('^', 77)
+	// 	]
+	// }
+
 	#[test]
 	fn drain_min() {
 		let ph = setup();
@@ -579,16 +612,58 @@ mod tests {
 mod bench {
 	use super::*;
     use test::{Bencher, black_box};
+    use ::std::collections::BinaryHeap;
 
-	// #[bench]
-	// fn pairing_heap_insert(bencher: &mut Bencher) {
-	// 	let input = read_file_to_string("bench/input.txt");
-	// 	let (lines, mut interner) = setup_input(&input);
-	// 	bencher.iter(|| {
-	// 		for &line in lines.iter() {
-	// 			black_box(interner.get_or_intern(line));
-	// 		}
-	// 		interner.clear();
-	// 	});
-	// }
+    fn setup_sample() -> Vec<i64> {
+		use rand::{thread_rng, sample};
+		let n       = 100_000;
+		let mut rng = thread_rng();
+		sample(&mut rng, 1..n, n as usize)
+    }
+
+	#[bench]
+	fn pairing_heap_push(bencher: &mut Bencher) {
+		let sample = setup_sample();
+		bencher.iter(|| {
+			let mut ph = PairingHeap::new();
+			for &key in sample.iter() {
+				black_box(ph.insert((), key));
+			}
+		});
+	}
+
+	#[bench]
+	fn binary_heap_push(bencher: &mut Bencher) {
+		let sample = setup_sample();
+		bencher.iter(|| {
+			let mut bh = BinaryHeap::new();
+			for &key in sample.iter() {
+				black_box(bh.push(key));
+			}
+		});
+	}
+
+	#[bench]
+	fn pairing_heap_pop(bencher: &mut Bencher) {
+		let mut ph = PairingHeap::new();
+		for &key in setup_sample().iter() {
+			ph.insert((), key);
+		}
+		bencher.iter(|| {
+			let mut ph = ph.clone();
+			while let Some(_) = black_box(ph.take_min()) {}
+		});
+	}
+
+	#[bench]
+	fn binary_heap_pop(bencher: &mut Bencher) {
+		let mut bh = BinaryHeap::new();
+		for &key in setup_sample().iter() {
+			bh.push(key);
+		}
+		bencher.iter(|| {
+			let mut bh = bh.clone();
+			while let Some(_) = black_box(bh.pop()) {}
+		});
+	}
 }
