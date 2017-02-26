@@ -11,9 +11,9 @@ keywords = ["heap", "stash", "min-heap", "heap-sort", "collection"]
 categories = ["data-structures"]
 
 [dependencies]
-stash = "^0.1"
-unreachable = "^0"
-itertools = "^0"
+stash = "^0.1.2"
+unreachable = "^0.1.1"
+itertools = "^0.5.9"
 
 [features]
 bench = []

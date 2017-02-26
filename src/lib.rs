@@ -1,3 +1,5 @@
+#![cfg_attr(all(feature = "bench", test), feature(test))]
+
 #![deny(unused_imports)]
 #![deny(missing_docs)]
 
@@ -13,6 +15,9 @@
 //!
 //! It is possible to use custom types as the underlying `Key` type by implementing
 //! the `Key` trait.
+
+#[cfg(all(feature = "bench", test))]
+extern crate test;
 
 extern crate stash;
 extern crate unreachable;
@@ -568,4 +573,22 @@ mod tests {
 		// cannot test order of values since it is unspecified!
 		assert_eq!(values.count(), 18);
 	}
+}
+
+#[cfg(all(feature = "bench", test))]
+mod bench {
+	use super::*;
+    use test::{Bencher, black_box};
+
+	// #[bench]
+	// fn pairing_heap_insert(bencher: &mut Bencher) {
+	// 	let input = read_file_to_string("bench/input.txt");
+	// 	let (lines, mut interner) = setup_input(&input);
+	// 	bencher.iter(|| {
+	// 		for &line in lines.iter() {
+	// 			black_box(interner.get_or_intern(line));
+	// 		}
+	// 		interner.clear();
+	// 	});
+	// }
 }
