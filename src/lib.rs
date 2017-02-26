@@ -29,14 +29,17 @@ extern crate unreachable;
 pub struct Handle(usize);
 
 impl Handle {
+	#[inline]
 	fn undef() -> Self {
 		Handle(usize::max_value())
 	}
 
+	#[inline]
 	fn is_undef(self) -> bool {
 		self == Handle::undef()
 	}
 
+	#[inline]
 	fn to_usize(self) -> usize { self.0 }
 }
 
@@ -59,6 +62,7 @@ struct Entry<T, K> where K: Key {
 impl<T, K> Entry<T, K>
 	where K: Key
 {
+	#[inline]
 	fn new(key: K, elem: T) -> Self {
 		Entry{
 			key : key,
@@ -77,14 +81,17 @@ enum Position{
 }
 
 impl Position {
+	#[inline]
 	fn child(parent: Handle, index: usize) -> Self {
 		Position::Child(parent, index)
 	}
 
+	#[inline]
 	fn root(index: usize) -> Self {
 		Position::Root(index)
 	}
 
+	#[inline]
 	fn is_root(self) -> bool {
 		match self {
 			Position::Root(_) => true,
@@ -92,6 +99,7 @@ impl Position {
 		}
 	}
 
+	#[inline]
 	fn is_child(self) -> bool {
 		match self {
 			Position::Child(..) => true,
@@ -112,6 +120,7 @@ struct Node<T, K>
 impl<T, K> Node<T, K>
 	where K: Key
 {
+	#[inline]
 	fn new_root(at: usize, entry: Entry<T, K>) -> Self {
 		Node{
 			entry   : entry,
@@ -172,6 +181,7 @@ impl<T, K> PairingHeap<T, K>
 	where K: Key
 {
 	/// Creates a new instance of a `PairingHeap`.
+	#[inline]
 	pub fn new() -> Self {
 		PairingHeap{
 			min  : Handle::undef(),
@@ -181,23 +191,27 @@ impl<T, K> PairingHeap<T, K>
 	}
 
 	/// Returns the number of elements stored in this `PairingHeap`.
+	#[inline]
 	pub fn len(&self) -> usize {
 		self.data.len()
 	}
 
 	/// Returns true if this `PairingHeap` is empty.
+	#[inline]
 	pub fn is_empty(&self) -> bool {
 		self.len() == 0
 	}
 
 	/// Returns a reference to the `Node` that is associated with the given handle.
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
+	#[inline]
 	fn get(&self, handle: Handle) -> &Node<T, K> {
 		unsafe{ self.data.get_unchecked(handle.to_usize()) }
 	}
 
 	/// Returns a mutable reference to the `Node` that is associated with the given handle.
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
+	#[inline]
 	fn get_mut(&mut self, handle: Handle) -> &mut Node<T, K> {
 		unsafe{ self.data.get_unchecked_mut(handle.to_usize()) }
 	}
@@ -245,6 +259,7 @@ impl<T, K> PairingHeap<T, K>
 
 	/// Updates the internal pointer to the current minimum element by hinting
 	/// to a new possible min element within the heap.
+	#[inline]
 	fn update_min(&mut self, handle: Handle) {
 		if self.min.is_undef() || self.get(handle).entry.key < self.get(self.min).entry.key {
 			self.min = handle;
@@ -252,6 +267,7 @@ impl<T, K> PairingHeap<T, K>
 	}
 
 	/// Creates a new root node.
+	#[inline]
 	fn mk_root_node(&mut self, elem: T, key: K) -> Handle {
 		let idx = self.len();
 		Handle(
@@ -271,6 +287,7 @@ impl<T, K> PairingHeap<T, K>
 	/// and returns a `Handle` to it that allows to directly address it.
 	/// 
 	/// The handle is for example required in order to use methods like `decrease_key`.
+	#[inline]
 	pub fn insert(&mut self, elem: T, key: K) -> Handle {
 		let handle = self.mk_root_node(elem, key);
 		self.insert_root(handle);
@@ -313,6 +330,7 @@ impl<T, K> PairingHeap<T, K>
 	}
 
 	/// Returns a reference to the current minimum element if not empty.
+	#[inline]
 	pub fn get_min(&self) -> Option<&T> {
 		self.data
 			.get(self.min.to_usize())
@@ -321,11 +339,13 @@ impl<T, K> PairingHeap<T, K>
 
 	/// Returns a reference to the current minimum element without bounds checking.
 	/// So use it very carefully!
+	#[inline]
 	pub unsafe fn get_min_unchecked(&self) -> &T {
 		&self.get(self.min).entry.elem
 	}
 
 	/// Returns a mutable reference to the current minimum element if not empty.
+	#[inline]
 	pub fn get_min_mut(&mut self) -> Option<&mut T> {
 		self.data
 			.get_mut(self.min.to_usize())
@@ -334,12 +354,14 @@ impl<T, K> PairingHeap<T, K>
 
 	/// Returns a reference to the current minimum element without bounds checking.
 	/// So use it very carefully!
+	#[inline]
 	pub unsafe fn get_min_unchecked_mut(&mut self) -> &mut T {
 		let min = self.min;
 		&mut self.get_mut(min).entry.elem
 	}
 
 	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
+	#[inline]
 	pub fn take_min(&mut self) -> Option<T> {
 		match self.is_empty() {
 			true => None,
@@ -373,16 +395,19 @@ impl<T, K> PairingHeap<T, K>
 	}
 
 	/// Iterate over the values in this `PairingHeap` by reference in unspecified order.
+	#[inline]
 	pub fn values<'a>(&'a self) -> Values<'a, T, K> {
 		Values{iter: self.data.values()}
 	}
 
 	/// Iterate over the values in this `PairingHeap` by mutable reference unspecified order.
+	#[inline]
 	pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, T, K> {
 		ValuesMut{iter: self.data.values_mut()}
 	}
 
 	/// Iterate over values stored within a `PairingHeap` in a sorted-by-min order. Drains the heap.
+	#[inline]
 	pub fn drain_min(self) -> DrainMin<T, K> {
 		DrainMin{heap: self}
 	}
@@ -427,6 +452,7 @@ pub struct ValuesMut<'a, T: 'a, K: 'a + Key> {
 impl<'a, T, K: Key> Iterator for Values<'a, T, K> {
 	type Item = &'a T;
 
+	#[inline]
 	fn next(&mut self) -> Option<Self::Item> {
 		self.iter.next().map(|node| &node.entry.elem)
 	}
@@ -435,6 +461,7 @@ impl<'a, T, K: Key> Iterator for Values<'a, T, K> {
 impl<'a, T, K: Key> Iterator for ValuesMut<'a, T, K> {
 	type Item = &'a mut T;
 
+	#[inline]
 	fn next(&mut self) -> Option<Self::Item> {
 		self.iter.next().map(|node| &mut node.entry.elem)
 	}
@@ -448,6 +475,7 @@ pub struct DrainMin<T, K: Key> {
 impl<T, K: Key> Iterator for DrainMin<T, K> {
 	type Item = T;
 
+	#[inline]
 	fn next(&mut self) -> Option<Self::Item> {
 		self.heap.take_min()
 	}
