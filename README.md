@@ -9,5 +9,5 @@ An addressable pairing heap implementation for Rust.
 Allows to efficiently store elements associated with a key and access them via handles.
 Handles to elements make it possible to query and edit elements stored in the `PairingHeap`.  
 
-Documentation: [link](https://docs.rs/string-interner)  
-crates.io: [link](https://crates.io/crates/string-interner)
+Documentation: [link](https://docs.rs/addressable-pairing-heap)  
+crates.io: [link](https://crates.io/crates/addressable-pairing-heap)
