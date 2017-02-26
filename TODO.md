@@ -11,8 +11,8 @@ TODO List for Addressable Pairing Heap
    - To compare performance between `PairingHeap` and `BinaryHeap` of the standard library.
 
 - Renames:
-   - `get` to `resolve`
-   - `get_mut` to `resolve_mut`
+   - `get` to `node`
+   - `get_mut` to `node_mut`
 
 - Add methods:
    - `get(&self, handle: Handle) -> Option<&T>`

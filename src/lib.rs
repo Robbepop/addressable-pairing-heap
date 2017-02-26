@@ -204,14 +204,14 @@ impl<T, K> PairingHeap<T, K>
 	/// Returns a reference to the `Node` that is associated with the given handle.
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
 	#[inline]
-	fn get(&self, handle: Handle) -> &Node<T, K> {
+	fn node(&self, handle: Handle) -> &Node<T, K> {
 		unsafe{ self.data.get_unchecked(handle.to_usize()) }
 	}
 
 	/// Returns a mutable reference to the `Node` that is associated with the given handle.
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
 	#[inline]
-	fn get_mut(&mut self, handle: Handle) -> &mut Node<T, K> {
+	fn node_mut(&mut self, handle: Handle) -> &mut Node<T, K> {
 		unsafe{ self.data.get_unchecked_mut(handle.to_usize()) }
 	}
 
@@ -220,11 +220,11 @@ impl<T, K> PairingHeap<T, K>
 	fn link(&mut self, upper: Handle, lower: Handle) {
 
 		debug_assert!(upper != lower, "cannot link to self!");
-		debug_assert!(self.get(lower).pos.is_root(), "lower cannot have multiple parents!");
+		debug_assert!(self.node(lower).pos.is_root(), "lower cannot have multiple parents!");
 
-		let idx = self.get(upper).children.len();
-		self.get_mut(upper).children.push(lower);
-		self.get_mut(lower).pos = Position::child(upper, idx);
+		let idx = self.node(upper).children.len();
+		self.node_mut(upper).children.push(lower);
+		self.node_mut(lower).pos = Position::child(upper, idx);
 		self.insert_root(upper);
 	}
 
@@ -233,7 +233,7 @@ impl<T, K> PairingHeap<T, K>
 	fn union(&mut self, fst: Handle, snd: Handle) {
 		debug_assert!(fst != snd, "cannot union self with itself");
 
-		if self.get(fst).entry.key < self.get(snd).entry.key {
+		if self.node(fst).entry.key < self.node(snd).entry.key {
 			self.link(fst, snd)
 		}
 		else {
@@ -260,7 +260,7 @@ impl<T, K> PairingHeap<T, K>
 	/// to a new possible min element within the heap.
 	#[inline]
 	fn update_min(&mut self, handle: Handle) {
-		if self.min.is_undef() || self.get(handle).entry.key < self.get(self.min).entry.key {
+		if self.min.is_undef() || self.node(handle).entry.key < self.node(self.min).entry.key {
 			self.min = handle;
 		}
 	}
@@ -278,7 +278,7 @@ impl<T, K> PairingHeap<T, K>
 	fn insert_root(&mut self, new_root: Handle) {
 		let idx = self.roots.len();
 		self.roots.push(new_root);
-		self.get_mut(new_root).pos = Position::root(idx);
+		self.node_mut(new_root).pos = Position::root(idx);
 		self.update_min(new_root);
 	}
 
@@ -297,13 +297,13 @@ impl<T, K> PairingHeap<T, K>
 	/// Cuts the given `child` from its parent and inserts it as a root into the `PairingHeap`.
 	/// Will panic if the given `child` is not a child and thus a root node already.
 	fn cut(&mut self, child: Handle) {
-		debug_assert!(self.get(child).pos.is_child());
+		debug_assert!(self.node(child).pos.is_child());
 
-		match self.get(child).pos {
+		match self.node(child).pos {
 			Position::Root(_) => unsafe{ ::unreachable::unreachable() },
 			Position::Child(parent, idx) => {
-				self.get_mut(parent).children.swap_remove(idx);
-				self.get_mut(child).pos = Position::root(self.len());
+				self.node_mut(parent).children.swap_remove(idx);
+				self.node_mut(child).pos = Position::root(self.len());
 				self.insert_root(child);
 			}
 		}
@@ -312,12 +312,12 @@ impl<T, K> PairingHeap<T, K>
 	/// Decreases the key of the element with the associated given `handle`.
 	/// Will panic if the given new key is not lower than the previous key.
 	pub fn decrease_key(&mut self, handle: Handle, new_key: K) -> Result<()> {
-		if new_key >= self.get(handle).entry.key {
+		if new_key >= self.node(handle).entry.key {
 			return Err(Error::DecreaseKeyOutOfOrder)
 		}
 
-		self.get_mut(handle).entry.key = new_key;
-		match self.get(handle).pos {
+		self.node_mut(handle).entry.key = new_key;
+		match self.node(handle).pos {
 			Position::Root(_) => {
 				self.update_min(handle);
 			},
@@ -340,7 +340,7 @@ impl<T, K> PairingHeap<T, K>
 	/// So use it very carefully!
 	#[inline]
 	pub unsafe fn peek_unchecked(&self) -> &T {
-		&self.get(self.min).entry.elem
+		&self.node(self.min).entry.elem
 	}
 
 	/// Returns a mutable reference to the current minimum element if not empty.
@@ -356,7 +356,7 @@ impl<T, K> PairingHeap<T, K>
 	#[inline]
 	pub unsafe fn peek_unchecked_mut(&mut self) -> &mut T {
 		let min = self.min;
-		&mut self.get_mut(min).entry.elem
+		&mut self.node_mut(min).entry.elem
 	}
 
 	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
@@ -374,12 +374,12 @@ impl<T, K> PairingHeap<T, K>
 	/// So use this method carefully!
 	pub unsafe fn pop_unchecked(&mut self) -> T {
 		let min = self.min;
-		match self.get(min).pos {
+		match self.node(min).pos {
 			Position::Child(..) => ::unreachable::unreachable(),
 			Position::Root(idx) => {
 				self.roots.swap_remove(idx);
 				self.min = Handle::undef();
-				for child in ::std::mem::replace(&mut self.get_mut(min).children, Vec::new()).into_iter() {
+				for child in ::std::mem::replace(&mut self.node_mut(min).children, Vec::new()).into_iter() {
 					self.insert_root(child);
 				}
 				self.pairwise_union();
