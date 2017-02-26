@@ -380,11 +380,6 @@ impl<T, K> PairingHeap<T, K>
 			Position::Root(idx) => {
 				self.roots.swap_remove(idx);
 				self.min = Handle::undef();
-				// let mut roots = Vec::with_capacity(self.get(min).children.len());
-				// roots.append(&mut self.get_mut(min).children);
-				// for &child in roots.iter() {
-				// 	self.insert_root(child);
-				// }
 				for child in ::std::mem::replace(&mut self.get_mut(min).children, Vec::new()).into_iter() {
 					self.insert_root(child);
 				}
