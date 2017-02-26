@@ -328,27 +328,57 @@ impl<T, K> PairingHeap<T, K>
 		Ok(())
 	}
 
-	/// Returns a reference to the current minimum element if not empty.
+	/// Returns a reference to the element associated with the given handle.
 	#[inline]
-	pub fn peek(&self) -> Option<&T> {
+	pub fn get(&self, handle: Handle) -> Option<&T> {
 		self.data
-			.get(self.min.to_usize())
+			.get(handle.to_usize())
 			.and_then(|node| Some(&node.entry.elem))
 	}
 
-	/// Returns a reference to the current minimum element without bounds checking.
-	/// So use it very carefully!
+	/// Returns a mutable reference to the element associated with the given handle.
+	#[inline]
+	pub fn get_mut(&mut self, handle: Handle) -> Option<&mut T> {
+		self.data
+			.get_mut(handle.to_usize())
+			.and_then(|node| Some(&mut node.entry.elem))
+	}
+
+	/// Returns a reference to the element associated with the given handle.
+	/// 
+	/// Does not perform bounds checking so use it carefully!
+	#[inline]
+	pub unsafe fn get_unchecked(&self, handle: Handle) -> &T {
+		&self.node(handle).entry.elem
+	}
+
+	/// Returns a mutable reference to the element associated with the given handle.
+	/// 
+	/// Does not perform bounds checking so use it carefully!
+	#[inline]
+	pub unsafe fn get_unchecked_mut(&mut self, handle: Handle) -> &mut T {
+		&mut self.node_mut(handle).entry.elem
+	}
+
+	/// Returns a reference to the current minimum element if not empty.
+	#[inline]
+	pub fn peek(&self) -> Option<&T> {
+		self.get(self.min)
+	}
+
+	/// Returns a reference to the current minimum element.
+	/// 
+	/// Does not perform bounds checking so use it carefully!
 	#[inline]
 	pub unsafe fn peek_unchecked(&self) -> &T {
-		&self.node(self.min).entry.elem
+		self.get_unchecked(self.min)
 	}
 
 	/// Returns a mutable reference to the current minimum element if not empty.
 	#[inline]
 	pub fn peek_mut(&mut self) -> Option<&mut T> {
-		self.data
-			.get_mut(self.min.to_usize())
-			.and_then(|node| Some(&mut node.entry.elem))
+		let min = self.min;
+		self.get_mut(min)
 	}
 
 	/// Returns a reference to the current minimum element without bounds checking.
@@ -356,7 +386,7 @@ impl<T, K> PairingHeap<T, K>
 	#[inline]
 	pub unsafe fn peek_unchecked_mut(&mut self) -> &mut T {
 		let min = self.min;
-		&mut self.node_mut(min).entry.elem
+		self.get_unchecked_mut(min)
 	}
 
 	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
