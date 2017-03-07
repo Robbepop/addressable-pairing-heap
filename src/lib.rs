@@ -25,4 +25,4 @@ extern crate itertools;
 extern crate unreachable;
 
 pub mod ptr_heap;
-// pub mod vec_heap;
+pub mod vec_heap;

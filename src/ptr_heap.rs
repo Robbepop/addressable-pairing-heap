@@ -12,7 +12,7 @@
 //! the `Key` trait.
 
 use stash::*;
-use itertools::*;
+// use itertools::*;
 
 /// A handle to access stored elements within an addressable pairing heap.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -129,7 +129,7 @@ struct HandleIter<'a, T, K>
 {
 	heap    : &'a PairingHeap<T, K>,
 	sentinel: Handle,
-	current : Handle,
+	peek    : Handle,
 	done    : bool
 }
 
@@ -143,7 +143,7 @@ impl<'a, T, K> HandleIter<'a, T, K>
 			None => HandleIter{
 				heap    : heap,
 				sentinel: Handle::uninitialized(),
-				current : Handle::uninitialized(),
+				peek    : Handle::uninitialized(),
 				done    : true
 			},
 			Some(child) => HandleIter::siblings(heap, child)
@@ -157,7 +157,7 @@ impl<'a, T, K> HandleIter<'a, T, K>
 		HandleIter{
 			heap    : heap,
 			sentinel: child,
-			current : heap.node(child).right,
+			peek    : child,
 			done    : false
 		}
 	}
@@ -171,15 +171,14 @@ impl<'a, T, K> Iterator for HandleIter<'a, T, K>
 
 	fn next(&mut self) -> Option<Self::Item> {
 		match self.done {
-			true => None,
+			true  => None,
 			false => {
-				// println!("HandleIter::next, self.sentinel = {:?}, self.current = {:?}", self.sentinel, self.current);
-				let cur = self.current;
-				self.current = self.heap.node(cur).right;
-				if self.current == self.sentinel {
+				let next = self.peek;
+				self.peek = self.heap.node(next).right;
+				if self.peek == self.sentinel {
 					self.done = true;
 				}
-				Some(cur)
+				Some(next)
 			}
 		}
 	}
@@ -214,7 +213,6 @@ impl<T, K> PairingHeap<T, K>
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
 	#[inline]
 	fn node(&self, handle: Handle) -> &Node<K> {
-		// println!("PairingHeap::node");
 		unsafe{ self.nodes.get_unchecked(handle) }
 	}
 
@@ -222,7 +220,6 @@ impl<T, K> PairingHeap<T, K>
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
 	#[inline]
 	fn node_mut(&mut self, handle: Handle) -> &mut Node<K> {
-		// println!("PairingHeap::node_mut");
 		unsafe{ self.nodes.get_unchecked_mut(handle) }
 	}
 
@@ -243,8 +240,7 @@ impl<T, K> PairingHeap<T, K>
 	/// Adds the given new child to the given child's siblings.
 	#[inline]
 	fn add_sibling(&mut self, child: Handle, new_child: Handle) {
-		println!("PairingHeap::add_sibling");
-		// self.detach_siblings(new_child);
+		self.detach_siblings(new_child); // experimental!
 		self.node_mut(new_child).parent = self.node(child).parent;
 		self.node_mut(new_child).right  = self.node(child).right;
 		self.node_mut(new_child).left   = child;
@@ -256,8 +252,7 @@ impl<T, K> PairingHeap<T, K>
 	/// Adds the given child to the parent node.
 	#[inline]
 	fn add_child(&mut self, parent: Handle, new_child: Handle) {
-		println!("PairingHeap::add_child");
-		// self.detach_siblings(new_child);
+		self.detach_siblings(new_child); // experimental!
 		match self.node(parent).child {
 			None => {
 				self.node_mut(parent).child     = Some(new_child);
@@ -272,7 +267,6 @@ impl<T, K> PairingHeap<T, K>
 	/// Links the given `lower` tree under the given `upper` tree thus making `lower`
 	/// a children of `upper`.
 	fn link(&mut self, upper: Handle, lower: Handle) {
-		println!("PairingHeap::link");
 		debug_assert!(upper != lower, "cannot link to self!");
 		debug_assert!(self.node(lower).is_root(), "lower cannot have multiple parents!");
 
@@ -283,9 +277,8 @@ impl<T, K> PairingHeap<T, K>
 	/// Links the element with the lower key over the element with the higher key.
 	/// Thus making one the child of the other.
 	fn union(&mut self, fst: Handle, snd: Handle) {
-		println!("PairingHeap::union");
-		// debug_assert!(self.node(fst).is_root());
-		// debug_assert!(self.node(snd).is_root());
+		debug_assert!(self.node(fst).is_root());
+		debug_assert!(self.node(snd).is_root());
 		debug_assert!(fst != snd, "cannot union self with itself");
 
 		if self.node(fst).key < self.node(snd).key {
@@ -299,15 +292,13 @@ impl<T, K> PairingHeap<T, K>
 	/// Pairwise unifies roots in the `PairingHeap` which
 	/// effectively decreases the number of roots to half.
 	fn pairwise_union(&mut self) {
-		println!("PairingHeap::pairwise_union");
-		match self.min {
-			None => unsafe{
-				::unreachable::unreachable()
-			},
-			Some(min) => {
-				for (left, right) in self.siblings(min).tuples().collect::<Vec<_>>() {
-					println!("PairingHeap::pairwise_union({:?}, {:?}", left, right);
-					self.union(left, right)
+		if let Some(min) = self.min {
+			let mut siblings = self.siblings(min).collect::<Vec<_>>().into_iter();
+			loop {
+				match (siblings.next(), siblings.next()) {
+					(Some(left), Some(right)) => self.union(left, right),
+					(Some(left), None       ) => self.update_min(left),
+					_                         => break
 				}
 			}
 		}
@@ -316,6 +307,7 @@ impl<T, K> PairingHeap<T, K>
 	/// Adds the given handle as a new root node into the heap.
 	#[inline]
 	fn insert_root(&mut self, new_root: Handle) {
+		// self.detach_siblings(new_root); // experimental!
 		match self.min {
 			None => {
 				self.node_mut(new_root).parent = None;
@@ -326,6 +318,7 @@ impl<T, K> PairingHeap<T, K>
 				self.update_min(new_root);
 			}
 		}
+		debug_assert!(self.node(new_root).is_root());
 	}
 
 	/// Updates the internal pointer to the current minimum element by hinting
@@ -369,7 +362,6 @@ impl<T, K> PairingHeap<T, K>
 	/// Detaches the given child from its siblings.
 	#[inline]
 	fn detach_siblings(&mut self, child: Handle) {
-		println!("PairingHeap::detach_siblings");
 		let right = self.node(child).right;
 		let left  = self.node(child).left;
 
@@ -403,6 +395,48 @@ impl<T, K> PairingHeap<T, K>
 			false => self.cut(handle)
 		}
 		Ok(())
+	}
+
+	/// Release children from the given parent making them root nodes.
+	fn release_children(&mut self, parent: Handle) {
+		for child in self.children(parent).collect::<Vec<_>>() {
+			self.insert_root(child)
+		}
+		self.node_mut(parent).child = None;
+	}
+
+	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
+	#[inline]
+	pub fn pop(&mut self) -> Option<T> {
+		match self.min {
+			Some(_) => Some(unsafe{ self.pop_unchecked() }),
+			None    => None
+		}
+	}
+
+	/// Removes the element associated with the minimum key within this `PairingHeap` without
+	/// checking for emptiness and returns it.
+	/// 
+	/// So use this method carefully!
+	pub unsafe fn pop_unchecked(&mut self) -> T {
+		match self.min {
+			None      => ::unreachable::unreachable(),
+			Some(min) => {
+				self.release_children(min);
+				self.min = Some(self.node(min).right);
+				let right = self.node(min).right;
+				if right != min {
+					self.min = Some(right);
+					self.detach_siblings(min);
+					self.pairwise_union();
+				}
+				else {
+					self.min = None;
+				}
+				self.nodes.take_unchecked(min);
+				self.elems.take_unchecked(min)
+			}
+		}
 	}
 
 	/// Returns a reference to the element associated with the given handle.
@@ -469,44 +503,6 @@ impl<T, K> PairingHeap<T, K>
 		match self.min {
 			Some(min) => self.get_unchecked_mut(min),
 			None      => ::unreachable::unreachable()
-		}
-	}
-
-	/// Release children from the given parent making them root nodes.
-	fn release_children(&mut self, parent: Handle) {
-		println!("PairingHeap::release_children");
-		for child in self.children(parent).collect::<Vec<_>>() {
-			self.insert_root(child)
-		}
-		self.node_mut(parent).child = None;
-	}
-
-	/// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
-	#[inline]
-	pub fn pop(&mut self) -> Option<T> {
-		println!("PairingHeap::pop");
-		match self.min {
-			Some(_) => Some(unsafe{ self.pop_unchecked() }),
-			None    => None
-		}
-	}
-
-	/// Removes the element associated with the minimum key within this `PairingHeap` without
-	/// checking for emptiness and returns it.
-	/// 
-	/// So use this method carefully!
-	pub unsafe fn pop_unchecked(&mut self) -> T {
-		println!("PairingHeap::pop_unchecked");
-		match self.min {
-			None      => ::unreachable::unreachable(),
-			Some(min) => {
-				self.min = Some(self.node(min).right);
-				self.detach_siblings(min);
-				self.release_children(min);
-				self.pairwise_union();
-				self.nodes.take_unchecked(min);
-				self.elems.take_unchecked(min)
-			}
 		}
 	}
 
@@ -592,67 +588,75 @@ mod tests {
 		assert_eq!(Some(5), ph.pop());
 		println!("ph = {:?}", ph);
 		assert_eq!(Some(6), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(Some(7), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(Some(8), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(Some(9), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(Some(0), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(Some(1), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(Some(3), ph.pop());
+		println!("ph = {:?}", ph);
 		assert_eq!(None   , ph.pop());
+		println!("ph = {:?}", ph);
 	}
 
-	// #[test]
-	// fn decrease_key() {
-	// 	let mut ph = PairingHeap::new();
-	// 	let a = ph.push(0,   0);
-	// 	let b = ph.push(1,  50);
-	// 	let c = ph.push(2, 100);
-	// 	let d = ph.push(3, 150);
-	// 	let e = ph.push(4, 200);
-	// 	let f = ph.push(5, 250);
-	// 	assert_eq!(Some(&0), ph.peek());
-	// 	assert_eq!(Ok(()), ph.decrease_key(f, -50));
-	// 	assert_eq!(Some(&5), ph.peek());
-	// 	assert_eq!(Ok(()), ph.decrease_key(e, -100));
-	// 	assert_eq!(Some(&4), ph.peek());
-	// 	assert_eq!(Ok(()), ph.decrease_key(d, -99));
-	// 	assert_eq!(Some(&4), ph.peek());
-	// 	assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(c, 1000));
-	// 	assert_eq!(Some(&4), ph.peek());
-	// 	assert_eq!(Ok(()), ph.decrease_key(b, -1000));
-	// 	assert_eq!(Some(&1), ph.peek());
-	// 	assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(a, 100));
-	// 	assert_eq!(Some(&1), ph.peek());
-	// }
+	#[test]
+	fn decrease_key() {
+		let mut ph = PairingHeap::new();
+		let a = ph.push(0,   0);
+		let b = ph.push(1,  50);
+		let c = ph.push(2, 100);
+		let d = ph.push(3, 150);
+		let e = ph.push(4, 200);
+		let f = ph.push(5, 250);
+		assert_eq!(Some(&0), ph.peek());
+		assert_eq!(Ok(()), ph.decrease_key(f, -50));
+		assert_eq!(Some(&5), ph.peek());
+		assert_eq!(Ok(()), ph.decrease_key(e, -100));
+		assert_eq!(Some(&4), ph.peek());
+		assert_eq!(Ok(()), ph.decrease_key(d, -99));
+		assert_eq!(Some(&4), ph.peek());
+		assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(c, 1000));
+		assert_eq!(Some(&4), ph.peek());
+		assert_eq!(Ok(()), ph.decrease_key(b, -1000));
+		assert_eq!(Some(&1), ph.peek());
+		assert_eq!(Err(Error::DecreaseKeyOutOfOrder), ph.decrease_key(a, 100));
+		assert_eq!(Some(&1), ph.peek());
+	}
 
-	// #[test]
-	// fn empty_take() {
-	// 	let mut ph = PairingHeap::<usize, usize>::new();
-	// 	assert_eq!(None, ph.pop());
-	// }
+	#[test]
+	fn empty_take() {
+		let mut ph = PairingHeap::<usize, usize>::new();
+		assert_eq!(None, ph.pop());
+	}
 
-	// fn setup() -> PairingHeap<char, i64> {
-	// 	let mut ph = PairingHeap::new();
-	// 	ph.push('a', 100);
-	// 	ph.push('b',  50);
-	// 	ph.push('c', 150);
-	// 	ph.push('d', -25);
-	// 	ph.push('e', 999);
-	// 	ph.push('f',  42);
-	// 	ph.push('g',  43);
-	// 	ph.push('i',  41);
-	// 	ph.push('j',-100);
-	// 	ph.push('k', -77);
-	// 	ph.push('l', 123);
-	// 	ph.push('m',-123);
-	// 	ph.push('n',   0);
-	// 	ph.push('o',  -1);
-	// 	ph.push('p',   2);
-	// 	ph.push('q',  -3);
-	// 	ph.push('r',   4);
-	// 	ph.push('s',  -5);
-	// 	ph
-	// }
+	fn setup() -> PairingHeap<char, i64> {
+		let mut ph = PairingHeap::new();
+		ph.push('a', 100);
+		ph.push('b',  50);
+		ph.push('c', 150);
+		ph.push('d', -25);
+		ph.push('e', 999);
+		ph.push('f',  42);
+		ph.push('g',  43);
+		ph.push('i',  41);
+		ph.push('j',-100);
+		ph.push('k', -77);
+		ph.push('l', 123);
+		ph.push('m',-123);
+		ph.push('n',   0);
+		ph.push('o',  -1);
+		ph.push('p',   2);
+		ph.push('q',  -3);
+		ph.push('r',   4);
+		ph.push('s',  -5);
+		ph
+	}
 
 	// fn setup_vec() -> Vec<(char, i64)> {
 	// 	vec![
@@ -685,42 +689,42 @@ mod tests {
 	// 	]
 	// }
 
-	// #[test]
-	// fn drain_min() {
-	// 	let ph = setup();
-	// 	let mut drain = ph.drain_min();
+	#[test]
+	fn drain_min() {
+		let ph = setup();
+		let mut drain = ph.drain_min();
 
-	// 	assert_eq!(drain.next(), Some('m'));
-	// 	assert_eq!(drain.next(), Some('j'));
-	// 	assert_eq!(drain.next(), Some('k'));
-	// 	assert_eq!(drain.next(), Some('d'));
-	// 	assert_eq!(drain.next(), Some('s'));
-	// 	assert_eq!(drain.next(), Some('q'));
-	// 	assert_eq!(drain.next(), Some('o'));
-	// 	assert_eq!(drain.next(), Some('n'));
+		assert_eq!(drain.next(), Some('m'));
+		assert_eq!(drain.next(), Some('j'));
+		assert_eq!(drain.next(), Some('k'));
+		assert_eq!(drain.next(), Some('d'));
+		assert_eq!(drain.next(), Some('s'));
+		assert_eq!(drain.next(), Some('q'));
+		assert_eq!(drain.next(), Some('o'));
+		assert_eq!(drain.next(), Some('n'));
 
-	// 	assert_eq!(drain.next(), Some('p'));
-	// 	assert_eq!(drain.next(), Some('r'));
-	// 	assert_eq!(drain.next(), Some('i'));
-	// 	assert_eq!(drain.next(), Some('f'));
-	// 	assert_eq!(drain.next(), Some('g'));
-	// 	assert_eq!(drain.next(), Some('b'));
-	// 	assert_eq!(drain.next(), Some('a'));
-	// 	assert_eq!(drain.next(), Some('l'));
-	// 	assert_eq!(drain.next(), Some('c'));
-	// 	assert_eq!(drain.next(), Some('e'));
+		assert_eq!(drain.next(), Some('p'));
+		assert_eq!(drain.next(), Some('r'));
+		assert_eq!(drain.next(), Some('i'));
+		assert_eq!(drain.next(), Some('f'));
+		assert_eq!(drain.next(), Some('g'));
+		assert_eq!(drain.next(), Some('b'));
+		assert_eq!(drain.next(), Some('a'));
+		assert_eq!(drain.next(), Some('l'));
+		assert_eq!(drain.next(), Some('c'));
+		assert_eq!(drain.next(), Some('e'));
 
-	// 	assert_eq!(drain.next(), None);
-	// }
+		assert_eq!(drain.next(), None);
+	}
 
-	// #[test]
-	// fn values() {
-	// 	let ph = setup();
-	// 	let values = ph.values();
+	#[test]
+	fn values() {
+		let ph = setup();
+		let values = ph.values();
 
-	// 	// cannot test order of values since it is unspecified!
-	// 	assert_eq!(values.count(), 18);
-	// }
+		// cannot test order of values since it is unspecified!
+		assert_eq!(values.count(), 18);
+	}
 }
 
 #[cfg(all(feature = "bench", test))]
@@ -768,7 +772,7 @@ mod bench {
     }
 
 	#[bench]
-	fn pairing_heap_push(bencher: &mut Bencher) {
+	fn ptr_pairing_heap_push(bencher: &mut Bencher) {
 		let sample = setup_sample();
 		bencher.iter(|| {
 			let mut ph = PairingHeap::new();
@@ -779,7 +783,7 @@ mod bench {
 	}
 
 	#[bench]
-	fn pairing_heap_push_bigpod(bencher: &mut Bencher) {
+	fn ptr_pairing_heap_push_bigpod(bencher: &mut Bencher) {
 		let sample = setup_sample_bigpod();
 		bencher.iter(|| {
 			let mut ph = PairingHeap::new();
@@ -812,7 +816,7 @@ mod bench {
 	}
 
 	#[bench]
-	fn pairing_heap_pop(bencher: &mut Bencher) {
+	fn ptr_pairing_heap_pop(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for key in setup_sample().into_iter() {
 			ph.push((), key);
@@ -824,7 +828,7 @@ mod bench {
 	}
 
 	#[bench]
-	fn pairing_heap_pop_bigpod(bencher: &mut Bencher) {
+	fn ptr_pairing_heap_pop_bigpod(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for bigpod in setup_sample_bigpod().into_iter() {
 			let head = bigpod.elems[0];
@@ -861,7 +865,7 @@ mod bench {
 	}
 
 	#[bench]
-	fn pairing_heap_clone(bencher: &mut Bencher) {
+	fn ptr_pairing_heap_clone(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for key in setup_sample().into_iter() {
 			ph.push((), key);
