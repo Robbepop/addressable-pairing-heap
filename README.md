@@ -16,27 +16,27 @@ Benchmarks show that the current implementation suffers from performance issues 
 
 ## Binary Heap (standard-lib)
 ```
-test binary_heap_clone            ... bench:      27,059 ns/iter (+/- 600)
-test binary_heap_pop              ... bench:   3,244,202 ns/iter (+/- 69,019)
-test binary_heap_pop_bigpod       ... bench:  18,860,402 ns/iter (+/- 75,813)
-test binary_heap_push             ... bench:   1,803,009 ns/iter (+/- 90,223)
-test binary_heap_push_bigpod      ... bench:  10,559,628 ns/iter (+/- 194,993)
+test binary_heap_clone            ... bench:      27,537 ns/iter (+/- 1,006)
+test binary_heap_pop              ... bench:   3,312,799 ns/iter (+/- 63,197)
+test binary_heap_pop_bigpod       ... bench:  80,815,870 ns/iter (+/- 234,285)
+test binary_heap_push             ... bench:   1,878,911 ns/iter (+/- 105,333)
+test binary_heap_push_bigpod      ... bench:  43,423,423 ns/iter (+/- 283,598)
 ```
 
 ## Pairing Heap (offset-based implementation)
 ```
-test ptr_pairing_heap_clone       ... bench:   1,451,785 ns/iter (+/- 18,567)
-test ptr_pairing_heap_pop         ... bench:  21,101,458 ns/iter (+/- 512,387)
-test ptr_pairing_heap_pop_bigpod  ... bench:  27,793,057 ns/iter (+/- 365,974)
-test ptr_pairing_heap_push        ... bench:   4,604,275 ns/iter (+/- 97,326)
-test ptr_pairing_heap_push_bigpod ... bench:  12,298,900 ns/iter (+/- 211,846)
+test ptr_pairing_heap_clone       ... bench:   1,554,327 ns/iter (+/- 143,369)
+test ptr_pairing_heap_pop         ... bench:  16,134,333 ns/iter (+/- 1,517,587)
+test ptr_pairing_heap_pop_bigpod  ... bench:  48,197,309 ns/iter (+/- 157,727)
+test ptr_pairing_heap_push        ... bench:   4,726,005 ns/iter (+/- 101,163)
+test ptr_pairing_heap_push_bigpod ... bench:  39,347,464 ns/iter (+/- 446,011)
 ```
 
 ## Pairing Heap (vec-based implementation)
 ```
-test vec_pairing_heap_clone       ... bench:   1,725,481 ns/iter (+/- 43,596)
-test vec_pairing_heap_pop         ... bench:  11,155,717 ns/iter (+/- 215,189)
-test vec_pairing_heap_pop_bigpod  ... bench:  28,404,857 ns/iter (+/- 276,313)
-test vec_pairing_heap_push        ... bench:   3,273,197 ns/iter (+/- 43,445)
-test vec_pairing_heap_push_bigpod ... bench:  12,700,110 ns/iter (+/- 52,233)
+test vec_pairing_heap_clone       ... bench:   1,868,083 ns/iter (+/- 75,156)
+test vec_pairing_heap_pop         ... bench:  11,877,821 ns/iter (+/- 637,347)
+test vec_pairing_heap_pop_bigpod  ... bench:  58,990,571 ns/iter (+/- 370,100)
+test vec_pairing_heap_push        ... bench:   2,960,636 ns/iter (+/- 117,900)
+test vec_pairing_heap_push_bigpod ... bench:  26,025,722 ns/iter (+/- 57,091)
 ```

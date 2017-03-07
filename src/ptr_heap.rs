@@ -123,14 +123,65 @@ pub struct PairingHeap<T, K>
 	elems: Stash<T, Handle>
 }
 
+
+struct RawHandleIter {
+	sentinel: Handle,
+	peek    : Handle,
+	done    : bool
+}
+
+impl RawHandleIter {
+	fn children<T, K>(heap: &PairingHeap<T, K>, parent: Handle) -> RawHandleIter
+		where K: Key
+	{
+		match heap.node(parent).child {
+			None        => RawHandleIter::empty(),
+			Some(child) => RawHandleIter::siblings(child)
+		}
+	}
+
+	fn siblings(handle: Handle) -> RawHandleIter {
+		RawHandleIter{
+			sentinel: handle,
+			peek    : handle,
+			done    : false
+		}
+	}
+
+	fn empty() -> RawHandleIter {
+		RawHandleIter{
+			sentinel: Handle::uninitialized(),
+			peek    : Handle::uninitialized(),
+			done    : true
+		}
+	}
+
+	fn next<T, K>(&mut self, heap: &PairingHeap<T, K>) -> Option<Handle>
+		where K: Key
+	{
+		match self.done {
+			true  => None,
+			false => {
+				let next = self.peek;
+				self.peek = heap.node(next).right;
+				if self.peek == self.sentinel {
+					self.done = true;
+				}
+				Some(next)
+			}
+		}
+	}
+}
+
 struct HandleIter<'a, T, K>
 	where K: Key + 'a,
 	      T: 'a
 {
 	heap    : &'a PairingHeap<T, K>,
-	sentinel: Handle,
-	peek    : Handle,
-	done    : bool
+	iter    : RawHandleIter
+	// sentinel: Handle,
+	// peek    : Handle,
+	// done    : bool
 }
 
 impl<'a, T, K> HandleIter<'a, T, K>
@@ -139,15 +190,20 @@ impl<'a, T, K> HandleIter<'a, T, K>
 {
 	/// Iterator over the children of the given parent node.
 	fn children(heap: &'a PairingHeap<T, K>, parent: Handle) -> HandleIter<'a, T, K> {
-		match heap.node(parent).child {
-			None => HandleIter{
-				heap    : heap,
-				sentinel: Handle::uninitialized(),
-				peek    : Handle::uninitialized(),
-				done    : true
-			},
-			Some(child) => HandleIter::siblings(heap, child)
+		HandleIter{
+			heap: heap,
+			iter: RawHandleIter::children(heap, parent)
 		}
+		// match heap.node(parent).child {
+		// 	None => HandleIter{
+		// 		heap: heap,
+		// 		iter: RawHandleIter::empty()
+		// 		// sentinel: Handle::uninitialized(),
+		// 		// peek    : Handle::uninitialized(),
+		// 		// done    : true
+		// 	},
+		// 	Some(child) => HandleIter::siblings(heap, child)
+		// }
 	}
 
 	/// Iterator over the siblings of the given child node.
@@ -155,10 +211,11 @@ impl<'a, T, K> HandleIter<'a, T, K>
 	/// This also iterates inclusively over the given child.
 	fn siblings(heap: &'a PairingHeap<T, K>, child: Handle) -> HandleIter<'a, T, K> {
 		HandleIter{
-			heap    : heap,
-			sentinel: child,
-			peek    : child,
-			done    : false
+			heap: heap,
+			iter: RawHandleIter::siblings(child)
+			// sentinel: child,
+			// peek    : child,
+			// done    : false
 		}
 	}
 }
@@ -170,17 +227,18 @@ impl<'a, T, K> Iterator for HandleIter<'a, T, K>
 	type Item = Handle;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		match self.done {
-			true  => None,
-			false => {
-				let next = self.peek;
-				self.peek = self.heap.node(next).right;
-				if self.peek == self.sentinel {
-					self.done = true;
-				}
-				Some(next)
-			}
-		}
+		self.iter.next(self.heap)
+		// match self.done {
+		// 	true  => None,
+		// 	false => {
+		// 		let next = self.peek;
+		// 		self.peek = self.heap.node(next).right;
+		// 		if self.peek == self.sentinel {
+		// 			self.done = true;
+		// 		}
+		// 		Some(next)
+		// 	}
+		// }
 	}
 }
 
@@ -221,6 +279,14 @@ impl<T, K> PairingHeap<T, K>
 	#[inline]
 	fn node_mut(&mut self, handle: Handle) -> &mut Node<K> {
 		unsafe{ self.nodes.get_unchecked_mut(handle) }
+	}
+
+	fn raw_children(&self, parent: Handle) -> RawHandleIter {
+		RawHandleIter::children(self, parent)
+	}
+
+	fn raw_siblings(&self, sibling: Handle) -> RawHandleIter {
+		RawHandleIter::siblings(sibling)
 	}
 
 	/// Returns an iterator over all children of the given parent node.
@@ -301,6 +367,14 @@ impl<T, K> PairingHeap<T, K>
 					_                         => break
 				}
 			}
+			// let mut raw_siblings = self.raw_siblings(min);
+			// loop {
+			// 	match (raw_siblings.next(self), raw_siblings.next(self)) {
+			// 		(Some(left), Some(right)) => self.union(left, right),
+			// 		(Some(left), None       ) => self.update_min(left),
+			// 		_                         => break
+			// 	}
+			// }
 		}
 	}
 
@@ -399,9 +473,13 @@ impl<T, K> PairingHeap<T, K>
 
 	/// Release children from the given parent making them root nodes.
 	fn release_children(&mut self, parent: Handle) {
-		for child in self.children(parent).collect::<Vec<_>>() {
+		let mut raw_children = self.raw_children(parent);
+		while let Some(child) = raw_children.next(self) {
 			self.insert_root(child)
 		}
+		// for child in self.children(parent).collect::<Vec<_>>() {
+		// 	self.insert_root(child)
+		// }
 		self.node_mut(parent).child = None;
 	}
 
