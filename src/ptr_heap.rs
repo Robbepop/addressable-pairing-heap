@@ -752,22 +752,28 @@ mod bench {
 
     #[derive(Debug, Clone, PartialEq, Eq, Ord)]
     struct BigPod {
-    	elems: [i64; 32]
+    	elems0: [i64; 32],
+    	elems1: [i64; 32],
+    	elems2: [i64; 32],
+    	elems3: [i64; 32]
     }
 
     impl From<i64> for BigPod {
     	fn from(val: i64) -> BigPod {
     		let mut bp = BigPod{
-    			elems: [0; 32]
+    			elems0: [0; 32],
+    			elems1: [1; 32],
+    			elems2: [2; 32],
+    			elems3: [3; 32]
     		};
-    		bp.elems[0] = val;
+    		bp.elems0[0] = val;
     		bp
     	}
     }
 
     impl PartialOrd for BigPod {
     	fn partial_cmp(&self, other: &BigPod) -> Option<::std::cmp::Ordering> {
-    		self.elems[0].partial_cmp(&other.elems[0])
+    		self.elems0[0].partial_cmp(&other.elems0[0])
     	}
     }
 
@@ -788,7 +794,7 @@ mod bench {
 		bencher.iter(|| {
 			let mut ph = PairingHeap::new();
 			for bigpod in sample.iter() {
-				black_box(ph.push(bigpod.clone(), bigpod.elems[0]));
+				black_box(ph.push(bigpod.clone(), bigpod.elems0[0]));
 			}
 		});
 	}
@@ -831,7 +837,7 @@ mod bench {
 	fn ptr_pairing_heap_pop_bigpod(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for bigpod in setup_sample_bigpod().into_iter() {
-			let head = bigpod.elems[0];
+			let head = bigpod.elems0[0];
 			ph.push(bigpod, head);
 		}
 		bencher.iter(|| {

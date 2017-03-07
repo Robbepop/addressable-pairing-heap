@@ -25,9 +25,18 @@ impl Handle {
 	fn is_undef(self) -> bool {
 		self == Handle::undef()
 	}
+}
 
-	#[inline]
-	fn to_usize(self) -> usize { self.0 }
+impl From<usize> for Handle {
+	fn from(val: usize) -> Handle {
+		Handle(val)
+	}
+}
+
+impl From<Handle> for usize {
+	fn from(handle: Handle) -> usize {
+		handle.0
+	}
 }
 
 /// Represents a trait for keys within an addressable pairing heap.
@@ -161,7 +170,7 @@ pub struct PairingHeap<T, K>
 
 	/// In the ```data``` vector all elements are stored.
 	/// This indirection to the real data allows for efficient addressable elements via handles.
-	data: Stash<Node<T, K>>
+	data: Stash<Node<T, K>, Handle>
 }
 
 impl<T, K> PairingHeap<T, K>
@@ -173,7 +182,7 @@ impl<T, K> PairingHeap<T, K>
 		PairingHeap{
 			min  : Handle::undef(),
 			roots: Vec::new(),
-			data : Stash::new()
+			data : Stash::default()
 		}
 	}
 
@@ -193,14 +202,14 @@ impl<T, K> PairingHeap<T, K>
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
 	#[inline]
 	fn node(&self, handle: Handle) -> &Node<T, K> {
-		unsafe{ self.data.get_unchecked(handle.to_usize()) }
+		unsafe{ self.data.get_unchecked(handle) }
 	}
 
 	/// Returns a mutable reference to the `Node` that is associated with the given handle.
 	/// Note that this won't fail on usage for a correct implementation of `PairingHeap`.
 	#[inline]
 	fn node_mut(&mut self, handle: Handle) -> &mut Node<T, K> {
-		unsafe{ self.data.get_unchecked_mut(handle.to_usize()) }
+		unsafe{ self.data.get_unchecked_mut(handle) }
 	}
 
 	/// Links the given `lower` tree under the given `upper` tree thus making `lower`
@@ -257,9 +266,8 @@ impl<T, K> PairingHeap<T, K>
 	#[inline]
 	fn mk_root_node(&mut self, elem: T, key: K) -> Handle {
 		let idx = self.len();
-		Handle(
-			self.data.put(
-				Node::new_root(idx, Entry::new(key, elem))))
+		self.data.put(
+				Node::new_root(idx, Entry::new(key, elem)))
 	}
 
 	/// Inserts a new root into the `PairingHeap` and checks whether it is the new minimum element.
@@ -320,7 +328,7 @@ impl<T, K> PairingHeap<T, K>
 	#[inline]
 	pub fn get(&self, handle: Handle) -> Option<&T> {
 		self.data
-			.get(handle.to_usize())
+			.get(handle)
 			.and_then(|node| Some(&node.entry.elem))
 	}
 
@@ -328,7 +336,7 @@ impl<T, K> PairingHeap<T, K>
 	#[inline]
 	pub fn get_mut(&mut self, handle: Handle) -> Option<&mut T> {
 		self.data
-			.get_mut(handle.to_usize())
+			.get_mut(handle)
 			.and_then(|node| Some(&mut node.entry.elem))
 	}
 
@@ -401,7 +409,7 @@ impl<T, K> PairingHeap<T, K>
 					self.insert_root(child);
 				}
 				self.pairwise_union();
-				self.data.take_unchecked(min.to_usize()).entry.elem
+				self.data.take_unchecked(min).entry.elem
 			}
 		}
 	}
@@ -434,7 +442,7 @@ impl<T, K> Index<Handle> for PairingHeap<T, K>
 
 	fn index(&self, handle: Handle) -> &Self::Output {
 		&self.data
-			.get(handle.to_usize())
+			.get(handle)
 			.expect("no node found for given handle")
 			.entry.elem
 	}
@@ -445,7 +453,7 @@ impl<T, K> IndexMut<Handle> for PairingHeap<T, K>
 {
 	fn index_mut(&mut self, handle: Handle) -> &mut Self::Output {
 		&mut self.data
-			.get_mut(handle.to_usize())
+			.get_mut(handle)
 			.expect("no node found for given handle")
 			.entry.elem
 	}
@@ -670,22 +678,28 @@ mod bench {
 
     #[derive(Debug, Clone, PartialEq, Eq, Ord)]
     struct BigPod {
-    	elems: [i64; 32]
+    	elems0: [i64; 32],
+    	elems1: [i64; 32],
+    	elems2: [i64; 32],
+    	elems3: [i64; 32]
     }
 
     impl From<i64> for BigPod {
     	fn from(val: i64) -> BigPod {
     		let mut bp = BigPod{
-    			elems: [0; 32]
+    			elems0: [0; 32],
+    			elems1: [1; 32],
+    			elems2: [2; 32],
+    			elems3: [3; 32]
     		};
-    		bp.elems[0] = val;
+    		bp.elems0[0] = val;
     		bp
     	}
     }
 
     impl PartialOrd for BigPod {
     	fn partial_cmp(&self, other: &BigPod) -> Option<::std::cmp::Ordering> {
-    		self.elems[0].partial_cmp(&other.elems[0])
+    		self.elems0[0].partial_cmp(&other.elems0[0])
     	}
     }
 
@@ -706,7 +720,7 @@ mod bench {
 		bencher.iter(|| {
 			let mut ph = PairingHeap::new();
 			for bigpod in sample.iter() {
-				black_box(ph.push(bigpod.clone(), bigpod.elems[0]));
+				black_box(ph.push(bigpod.clone(), bigpod.elems0[0]));
 			}
 		});
 	}
@@ -749,7 +763,7 @@ mod bench {
 	fn vec_pairing_heap_pop_bigpod(bencher: &mut Bencher) {
 		let mut ph = PairingHeap::new();
 		for bigpod in setup_sample_bigpod().into_iter() {
-			let head = bigpod.elems[0];
+			let head = bigpod.elems0[0];
 			ph.push(bigpod, head);
 		}
 		bencher.iter(|| {
