@@ -11,7 +11,8 @@ keywords = ["heap", "stash", "min-heap", "heap-sort", "collection"]
 categories = ["data-structures"]
 
 [dependencies]
-stash = "^0.1.2"
+stash = "^0.1.3"
+itertools = "^0.5.9"
 unreachable = "^0.1.1"
 rand = "0.3"
 
