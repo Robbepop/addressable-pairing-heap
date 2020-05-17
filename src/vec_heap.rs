@@ -64,10 +64,7 @@ where
 {
     #[inline]
     fn new(key: K, elem: T) -> Self {
-        Entry {
-            key: key,
-            elem: elem,
-        }
+        Entry { key, elem }
     }
 }
 
@@ -125,7 +122,7 @@ where
     #[inline]
     fn new_root(at: usize, entry: Entry<T, K>) -> Self {
         Node {
-            entry: entry,
+            entry,
             pos: Position::root(at),
             children: Vec::new(),
         }
@@ -180,6 +177,19 @@ where
     data: Stash<Node<T, K>, Handle>,
 }
 
+impl<T, K> Default for PairingHeap<T, K>
+where
+    K: Key,
+{
+    fn default() -> Self {
+        Self {
+            min: Handle::undef(),
+            roots: Vec::new(),
+            data: Stash::default(),
+        }
+    }
+}
+
 impl<T, K> PairingHeap<T, K>
 where
     K: Key,
@@ -187,11 +197,7 @@ where
     /// Creates a new instance of a `PairingHeap`.
     #[inline]
     pub fn new() -> Self {
-        PairingHeap {
-            min: Handle::undef(),
-            roots: Vec::new(),
-            data: Stash::default(),
-        }
+        Self::default()
     }
 
     /// Returns the number of elements stored in this `PairingHeap`.
@@ -330,22 +336,22 @@ where
     /// Returns a reference to the element associated with the given handle.
     #[inline]
     pub fn get(&self, handle: Handle) -> Option<&T> {
-        self.data
-            .get(handle)
-            .and_then(|node| Some(&node.entry.elem))
+        self.data.get(handle).map(|node| &node.entry.elem)
     }
 
     /// Returns a mutable reference to the element associated with the given handle.
     #[inline]
     pub fn get_mut(&mut self, handle: Handle) -> Option<&mut T> {
-        self.data
-            .get_mut(handle)
-            .and_then(|node| Some(&mut node.entry.elem))
+        self.data.get_mut(handle).map(|node| &mut node.entry.elem)
     }
 
     /// Returns a reference to the element associated with the given handle.
     ///
     /// Does not perform bounds checking so use it carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn get_unchecked(&self, handle: Handle) -> &T {
         &self.node(handle).entry.elem
@@ -354,6 +360,10 @@ where
     /// Returns a mutable reference to the element associated with the given handle.
     ///
     /// Does not perform bounds checking so use it carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, handle: Handle) -> &mut T {
         &mut self.node_mut(handle).entry.elem
@@ -368,6 +378,10 @@ where
     /// Returns a reference to the current minimum element.
     ///
     /// Does not perform bounds checking so use it carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn peek_unchecked(&self) -> &T {
         self.get_unchecked(self.min)
@@ -382,6 +396,10 @@ where
 
     /// Returns a reference to the current minimum element without bounds checking.
     /// So use it very carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn peek_unchecked_mut(&mut self) -> &mut T {
         let min = self.min;
@@ -391,16 +409,21 @@ where
     /// Removes the element associated with the minimum key within this `PairingHeap` and returns it.
     #[inline]
     pub fn pop(&mut self) -> Option<T> {
-        match self.is_empty() {
-            true => None,
-            _ => unsafe { Some(self.pop_unchecked()) },
+        if self.is_empty() {
+            return None;
         }
+
+        unsafe { Some(self.pop_unchecked()) }
     }
 
     /// Removes the element associated with the minimum key within this `PairingHeap` without
     /// checking for emptiness and returns it.
     ///
     /// So use this method carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     pub unsafe fn pop_unchecked(&mut self) -> T {
         let min = self.min;
         match self.node(min).pos {
@@ -421,7 +444,7 @@ where
 
     /// Iterate over the values in this `PairingHeap` by reference in unspecified order.
     #[inline]
-    pub fn values<'a>(&'a self) -> Values<'a, T, K> {
+    pub fn values(&self) -> Values<'_, T, K> {
         Values {
             iter: self.data.values(),
         }
@@ -429,7 +452,7 @@ where
 
     /// Iterate over the values in this `PairingHeap` by mutable reference unspecified order.
     #[inline]
-    pub fn values_mut<'a>(&'a mut self) -> ValuesMut<'a, T, K> {
+    pub fn values_mut(&mut self) -> ValuesMut<'_, T, K> {
         ValuesMut {
             iter: self.data.values_mut(),
         }

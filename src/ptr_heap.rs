@@ -69,7 +69,7 @@ where
             child: None,
             left: Handle::uninitialized(),
             right: Handle::uninitialized(),
-            key: key,
+            key,
         }
     }
 
@@ -163,17 +163,16 @@ impl RawHandleIter {
     where
         K: Key,
     {
-        match self.done {
-            true => None,
-            false => {
-                let next = self.peek;
-                self.peek = heap.node(next).right;
-                if self.peek == self.sentinel {
-                    self.done = true;
-                }
-                Some(next)
-            }
+        if self.done {
+            return None;
         }
+
+        let next = self.peek;
+        self.peek = heap.node(next).right;
+        if self.peek == self.sentinel {
+            self.done = true;
+        }
+        Some(next)
     }
 }
 
@@ -196,7 +195,7 @@ where
     /// Iterator over the children of the given parent node.
     fn children(heap: &'a PairingHeap<T, K>, parent: Handle) -> HandleIter<'a, T, K> {
         HandleIter {
-            heap: heap,
+            heap,
             iter: RawHandleIter::children(heap, parent),
         }
         // match heap.node(parent).child {
@@ -216,7 +215,7 @@ where
     /// This also iterates inclusively over the given child.
     fn siblings(heap: &'a PairingHeap<T, K>, child: Handle) -> HandleIter<'a, T, K> {
         HandleIter {
-            heap: heap,
+            heap,
             iter: RawHandleIter::siblings(child), // sentinel: child,
                                                   // peek    : child,
                                                   // done    : false
@@ -247,6 +246,19 @@ where
     }
 }
 
+impl<T, K> Default for PairingHeap<T, K>
+where
+    K: Key,
+{
+    fn default() -> Self {
+        Self {
+            min: None,
+            nodes: Stash::default(),
+            elems: Stash::default(),
+        }
+    }
+}
+
 impl<T, K> PairingHeap<T, K>
 where
     K: Key,
@@ -254,11 +266,7 @@ where
     /// Creates a new instance of a `PairingHeap`.
     #[inline]
     pub fn new() -> Self {
-        PairingHeap {
-            min: None,
-            nodes: Stash::default(),
-            elems: Stash::default(),
-        }
+        Self::default()
     }
 
     /// Returns the number of elements stored in this `PairingHeap`.
@@ -297,7 +305,7 @@ where
 
     /// Returns an iterator over all children of the given parent node.
     #[inline]
-    fn children<'a>(&'a self, parent: Handle) -> HandleIter<'a, T, K> {
+    fn children(&self, parent: Handle) -> HandleIter<'_, T, K> {
         HandleIter::children(self, parent)
     }
 
@@ -305,7 +313,7 @@ where
     ///
     /// This also iterates inclusively over the given child.
     #[inline]
-    fn siblings<'a>(&'a self, child: Handle) -> HandleIter<'a, T, K> {
+    fn siblings(&self, child: Handle) -> HandleIter<'_, T, K> {
         HandleIter::siblings(self, child)
     }
 
@@ -472,9 +480,10 @@ where
         }
 
         self.node_mut(handle).key = new_key;
-        match self.node(handle).is_root() {
-            true => self.update_min(handle),
-            false => self.cut(handle),
+        if self.node(handle).is_root() {
+            self.update_min(handle);
+        } else {
+            self.cut(handle);
         }
         Ok(())
     }
@@ -504,6 +513,10 @@ where
     /// checking for emptiness and returns it.
     ///
     /// So use this method carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     pub unsafe fn pop_unchecked(&mut self) -> T {
         match self.min {
             None => ::unreachable::unreachable(),
@@ -539,6 +552,10 @@ where
     /// Returns a reference to the element associated with the given handle.
     ///
     /// Does not perform bounds checking so use it carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn get_unchecked(&self, handle: Handle) -> &T {
         self.elems.get_unchecked(handle)
@@ -547,6 +564,10 @@ where
     /// Returns a mutable reference to the element associated with the given handle.
     ///
     /// Does not perform bounds checking so use it carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, handle: Handle) -> &mut T {
         self.elems.get_unchecked_mut(handle)
@@ -564,6 +585,10 @@ where
     /// Returns a reference to the current minimum element.
     ///
     /// Does not perform bounds checking so use it carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn peek_unchecked(&self) -> &T {
         match self.min {
@@ -583,6 +608,10 @@ where
 
     /// Returns a reference to the current minimum element without bounds checking.
     /// So use it very carefully!
+    ///
+    /// # Safety
+    ///
+    /// TODO: document why `unsafe`
     #[inline]
     pub unsafe fn peek_unchecked_mut(&mut self) -> &mut T {
         match self.min {
@@ -593,13 +622,13 @@ where
 
     /// Iterate over the values in this `PairingHeap` by reference in unspecified order.
     #[inline]
-    pub fn values<'a>(&'a self) -> stash::Values<'a, T> {
+    pub fn values(&self) -> stash::Values<'_, T> {
         self.elems.values()
     }
 
     /// Iterate over the values in this `PairingHeap` by mutable reference unspecified order.
     #[inline]
-    pub fn values_mut<'a>(&'a mut self) -> stash::ValuesMut<'a, T> {
+    pub fn values_mut(&mut self) -> stash::ValuesMut<'_, T> {
         self.elems.values_mut()
     }
 
