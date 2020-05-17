@@ -351,7 +351,8 @@ where
     ///
     /// # Safety
     ///
-    /// TODO: document why `unsafe`
+    /// This is unsafe because the handle is not checked to access elements within the bounds of the
+    /// heap.
     #[inline]
     pub unsafe fn get_unchecked(&self, handle: Handle) -> &T {
         &self.node(handle).entry.elem
@@ -363,7 +364,8 @@ where
     ///
     /// # Safety
     ///
-    /// TODO: document why `unsafe`
+    /// This is unsafe because the handle is not checked to access elements within the bounds of the
+    /// heap.
     #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, handle: Handle) -> &mut T {
         &mut self.node_mut(handle).entry.elem
@@ -381,7 +383,7 @@ where
     ///
     /// # Safety
     ///
-    /// TODO: document why `unsafe`
+    /// This is unsafe because the heap is not checked to be non-empty.
     #[inline]
     pub unsafe fn peek_unchecked(&self) -> &T {
         self.get_unchecked(self.min)
@@ -399,7 +401,7 @@ where
     ///
     /// # Safety
     ///
-    /// TODO: document why `unsafe`
+    /// This is unsafe because the heap is not checked to be non-empty.
     #[inline]
     pub unsafe fn peek_unchecked_mut(&mut self) -> &mut T {
         let min = self.min;
@@ -423,7 +425,7 @@ where
     ///
     /// # Safety
     ///
-    /// TODO: document why `unsafe`
+    /// This is unsafe because the heap is not checked to be non-empty.
     pub unsafe fn pop_unchecked(&mut self) -> T {
         let min = self.min;
         match self.node(min).pos {
